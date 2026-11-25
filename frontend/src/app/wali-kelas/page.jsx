@@ -1,6 +1,7 @@
 'use client';
 
 import ModuleHeading from '@/components/common/ModuleHeading';
+import ModuleSearch from '@/components/common/ModuleSearch';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import ImportWaliKelasModal from '@/components/wali/ImportWaliKelasModal';
@@ -15,6 +16,7 @@ export default function WaliKelasPage() {
     showToast
   } = useApp();
 
+  const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -39,10 +41,13 @@ export default function WaliKelasPage() {
     );
   }
 
-  const eligibleSections = allClasses.filter(c => !levelFilter || c.tingkat === levelFilter);
+  const availableSections = [...new Set(
+    allClasses.filter(c => !levelFilter || c.tingkat === levelFilter).map(c => c.id.slice(1))
+  )];
   const filteredClasses = allClasses.filter(c => {
     if (levelFilter && c.tingkat !== levelFilter) return false;
-    if (sectionFilter && c.id !== sectionFilter) return false;
+    if (sectionFilter && c.id.slice(1) !== sectionFilter) return false;
+    if (search.trim() && ![c.nama, c.wali, c.telp].join(' ').toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
   });
 
@@ -152,19 +157,23 @@ export default function WaliKelasPage() {
             aria-label="Bagian"
             value={sectionFilter}
             onChange={event => {
-              const id = event.target.value;
-              setSectionFilter(id);
-              if (id) setLevelFilter(id.slice(0, 1));
+              setSectionFilter(event.target.value);
             }}
             className="module-control"
           >
             <option value="">Bagian</option>
-            {eligibleSections.map(item => (
-              <option key={item.id} value={item.id}>
-                {levelFilter ? item.id.slice(1) : item.id}
+            {availableSections.map(sec => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>
+          <ModuleSearch
+            aria-label="Cari wali kelas"
+            placeholder="Cari kelas, nama wali, atau no. telp..."
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+          />
         </div>
 
         <div aria-label="Aksi wali kelas" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">

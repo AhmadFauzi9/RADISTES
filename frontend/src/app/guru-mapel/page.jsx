@@ -142,15 +142,20 @@ export default function GuruMapelPage() {
     XLSX.writeFile(book, 'template-penugasan-guru.xlsx');
   }
 
-  const eligible = allClasses.filter(c => !levelFilter || c.tingkat === levelFilter);
+  const availableSections = [...new Set(
+    allClasses.filter(c => !levelFilter || c.tingkat === levelFilter).map(c => c.id.slice(1))
+  )];
 
   const visible = teachersList
     .filter(teacher => !teacher.isAdmin && [teacher.nama, teacher.username].some(v => v.toLowerCase().includes(search.toLowerCase())))
     .flatMap(teacher => {
-      const matching = (teacher.assignments || []).filter(a => !classFilter || a.classId === classFilter);
+      const matching = (teacher.assignments || []).filter(a =>
+        (!levelFilter || a.classId.startsWith(levelFilter)) &&
+        (!classFilter || a.classId.slice(1) === classFilter)
+      );
       return matching.length
         ? matching.map(a => ({ ...a, teacher }))
-        : classFilter ? [] : [{ teacher }];
+        : (levelFilter || classFilter) ? [] : [{ teacher }];
     });
 
   const totalGuru = new Set(visible.map(r => r.teacher.username)).size;
@@ -193,12 +198,6 @@ export default function GuruMapelPage() {
       {/* Toolbar Filter & Action */}
       <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <ModuleSearch
-            aria-label="Cari guru"
-            placeholder="Cari nama atau kode guru..."
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-          />
           <select
             aria-label="Kelas"
             className="module-control"
@@ -208,23 +207,29 @@ export default function GuruMapelPage() {
             <option value="">Kelas</option>
             {['7', '8', '9'].map(l => <option key={l} value={l}>{l}</option>)}
           </select>
+          
           <select
             aria-label="Bagian"
             className="module-control"
             value={classFilter}
             onChange={event => {
-              const id = event.target.value;
-              setClassFilter(id);
-              if (id) setLevelFilter(id.slice(0, 1));
-            }}
+              setClassFilter(event.target.value);
+            }}            
           >
             <option value="">Bagian</option>
-            {eligible.map(item => (
-              <option key={item.id} value={item.id}>
-                {levelFilter ? item.id.slice(1) : item.id}
+            {availableSections.map(sec => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>
+          
+          <ModuleSearch
+            aria-label="Cari guru"
+            placeholder="Cari nama atau kode guru..."
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+          />
         </div>
 
         <div aria-label="Aksi penugasan guru" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">

@@ -2,6 +2,7 @@
 
 import ModuleSearch from '@/components/common/ModuleSearch';
 import ModuleHeading from '@/components/common/ModuleHeading';
+import ModulePagination from '@/components/common/ModulePagination';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
@@ -15,7 +16,9 @@ export default function SubmissionTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const eligibleSections = allClasses.filter(item => !levelFilter || item.tingkat === levelFilter);
+  const availableSections = [...new Set(
+    allClasses.filter(item => !levelFilter || item.tingkat === levelFilter).map(item => item.id.slice(1))
+  )];
 
   // Tampilkan seluruh penugasan guru mapel dengan status dummy jika belum ada record setoran
   const allRows = teachersList
@@ -41,7 +44,7 @@ export default function SubmissionTable() {
 
   const rows = allRows.filter(row =>
     (!levelFilter || row.Kelas.startsWith(levelFilter)) &&
-    (!classId || row.Kelas === classId) &&
+    (!classId || row.Kelas.slice(1) === classId) &&
     (!status || row.Status === status) &&
     ['Kode', 'Guru', 'Kelas', 'Mapel', 'Status'].map(k => row[k]).join(' ').toLowerCase().includes(search.trim().toLowerCase())
   );
@@ -103,7 +106,7 @@ export default function SubmissionTable() {
             className="module-control"
           >
             {[10, 20, 50, 100].map(size => (
-              <option key={size} value={size}>{size} / hal</option>
+              <option key={size} value={size}>{size}</option>
             ))}
           </select>
           <select
@@ -120,16 +123,14 @@ export default function SubmissionTable() {
             aria-label="Bagian"
             value={classId}
             onChange={e => {
-              const id = e.target.value;
-              setClassId(id);
-              if (id) setLevelFilter(id.slice(0, 1));
+              setClassId(e.target.value);
               setCurrentPage(1);
             }}
           >
             <option value="">Bagian</option>
-            {eligibleSections.map(item => (
-              <option key={item.id} value={item.id}>
-                {levelFilter ? item.id.slice(1) : item.id}
+            {availableSections.map(sec => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>
@@ -139,7 +140,7 @@ export default function SubmissionTable() {
             value={status}
             onChange={e => { setStatus(e.target.value); setCurrentPage(1); }}
           >
-            <option value="">Semua Status</option>
+            <option value="">Status</option>
             <option value="Sudah mengirim">Sudah mengirim</option>
             <option value="Belum mengirim">Belum mengirim</option>
           </select>
@@ -222,78 +223,14 @@ export default function SubmissionTable() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-600">
-            <select
-              aria-label="Jumlah baris per halaman"
-              value={pageSize}
-              onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="module-control !h-8 !py-0 text-xs"
-            >
-              {[10, 20, 50, 100].map(size => (
-                <option key={size} value={size}>{size} / hal</option>
-              ))}
-            </select>
-            <span>
-              Menampilkan{' '}
-              <strong className="text-slate-800">
-                {rows.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, rows.length)}
-              </strong>{' '}
-              dari <strong className="text-slate-800">{rows.length}</strong> data
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={safePage <= 1}
-              onClick={() => setCurrentPage(safePage - 1)}
-              title="Halaman Sebelumnya"
-              aria-label="Halaman Sebelumnya"
-              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <i aria-hidden="true" className="fa-solid fa-chevron-left text-[11px]" />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-              .reduce((acc, p, idx, arr) => {
-                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((item, idx) =>
-                item === '...' ? (
-                  <span key={`dots-${idx}`} className="px-1.5 text-slate-400 font-mono">...</span>
-                ) : (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setCurrentPage(item)}
-                    className={`inline-flex h-8 min-w-8 px-2 items-center justify-center rounded-xl border text-xs font-bold transition cursor-pointer ${
-                      item === safePage
-                        ? 'border-brand-600 bg-brand-600 text-white shadow-2xs'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
-
-            <button
-              type="button"
-              disabled={safePage >= totalPages}
-              onClick={() => setCurrentPage(safePage + 1)}
-              title="Halaman Berikutnya"
-              aria-label="Halaman Berikutnya"
-              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <i aria-hidden="true" className="fa-solid fa-chevron-right text-[11px]" />
-            </button>
-          </div>
-        </div>
+        <ModulePagination
+          totalItems={rows.length}
+          pageSize={pageSize}
+          onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+          currentPage={safePage}
+          onPageChange={setCurrentPage}
+          itemLabel="data"
+        />
       </div>
 
     </div>

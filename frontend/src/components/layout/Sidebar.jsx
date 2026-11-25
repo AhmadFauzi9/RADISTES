@@ -20,17 +20,31 @@ export default function Sidebar() {
   const ALL_MENU_ITEMS = [
     { 
       key: 'dashboard', 
-      title: 'Dashboard STS', 
+      title: 'Dashboard', 
       icon: 'fa-chart-pie', 
       path: '/',
       visible: true 
     },
     { 
+      key: 'data-siswa', 
+      title: 'Data Siswa',
+      icon: 'fa-users', 
+      path: '/data-siswa',
+      visible: isSuperAdmin
+    },
+    { 
+      key: 'wali-kelas', 
+      title: 'Wali Kelas', 
+      icon: 'fa-user-tie', 
+      path: '/wali-kelas',
+      visible: isSuperAdmin
+    },
+    { 
       key: 'leger', 
-      title: 'Leger Nilai STS', 
+      title: 'Leger', 
       icon: 'fa-table-list', 
       path: '/leger', 
-      badge: isWaliKelas ? `Kelas ${currentUser.kelasWali}` : 'Inti',
+      badge: isWaliKelas ? `Kelas ${currentUser.kelasWali}` : '',
       // Guru Mapel murni TIDAK BOLEH mengakses halaman Leger Raport!
       visible: !isGuruMapelOnly 
     },
@@ -52,20 +66,6 @@ export default function Sidebar() {
       badge: isGuruMapelOnly ? 'Utama' : null,
       visible: true 
     },
-    { 
-      key: 'wali-kelas', 
-      title: 'Wali Kelas', 
-      icon: 'fa-user-tie', 
-      path: '/wali-kelas',
-      visible: isSuperAdmin
-    },
-    { 
-      key: 'data-siswa', 
-      title: 'Data Siswa',
-      icon: 'fa-users', 
-      path: '/data-siswa',
-      visible: isSuperAdmin
-    },
     {
       key: 'guru-mapel', title: 'Guru Mapel', icon: 'fa-chalkboard-user', path: '/guru-mapel',
       visible: isSuperAdmin
@@ -76,7 +76,7 @@ export default function Sidebar() {
     },
     { 
       key: 'pengaturan', 
-      title: 'Pengaturan Raport', 
+      title: 'Pengaturan', 
       icon: 'fa-gear', 
       path: '/pengaturan',
       visible: isSuperAdmin
@@ -167,6 +167,7 @@ export default function Sidebar() {
         aria-label="Keluar dari Akun"
         >
           <i aria-hidden="true" className="fa-solid fa-right-from-bracket w-4 text-center text-sm text-rose-500"></i>
+          Logout
         </button>
       </nav>
     </aside>

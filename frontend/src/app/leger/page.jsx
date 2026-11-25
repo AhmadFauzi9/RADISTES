@@ -205,16 +205,18 @@ export default function LegerPage() {
               const firstClass = allClasses.find(item => item.tingkat === level);
               if (firstClass) setSelectedClassId(firstClass.id);
             }} className="module-control">
-              <option value="" disabled>Kelas</option>
+              <option value="">Kelas</option>
               {['7', '8', '9'].map(level => <option key={level} value={level}>{level}</option>)}
             </select>
             <select aria-label="Bagian" value={sectionFilter} onChange={event => {
               const classId = event.target.value;
-              setLevelFilter(classId.slice(0, 1));
               setSectionFilter(classId);
-              setSelectedClassId(classId);
+              if (classId) {
+                setLevelFilter(classId.slice(0, 1));
+                setSelectedClassId(classId);
+              }
             }} className="module-control">
-              <option value="" disabled>Bagian</option>
+              <option value="">Bagian</option>
               {allClasses.filter(item => item.tingkat === (levelFilter || selectedClassId.slice(0, 1))).map(item => (
                 <option key={item.id} value={item.id}>{item.id.slice(1)}</option>
               ))}
@@ -229,10 +231,10 @@ export default function LegerPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
             className="module-control"
           >
-            <option value="all">Semua Siswa ({currentLeger.length})</option>
+            <option value="all">Status Nilai</option>
             <option value="complete">Nilai Lengkap ({completeCount})</option>
             <option value="incomplete">Belum Lengkap ({currentLeger.length - completeCount})</option>
-            <option value="belowKKM">Ada Nilai &lt; 70 (Remidi)</option>
+            <option value="belowKKM">Nilai &lt; 70 (Remidi)</option>
           </select>
 
         </div>
@@ -356,7 +358,6 @@ export default function LegerPage() {
                     {allMapel.map(m => (
                       <th key={m.key} className="py-1 px-1 text-center border-r border-slate-300 min-w-[48px] max-w-[60px]" title={m.name}>
                         <div className="font-extrabold truncate">{m.short}</div>
-                        <div className="text-[9px] text-slate-500 font-mono font-normal">KKM: {m.kkm}</div>
                       </th>
                     ))}
                     <th className="py-1 px-1 text-center border-r border-slate-300 text-slate-500 font-mono">Total</th>

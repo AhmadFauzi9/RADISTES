@@ -2,6 +2,7 @@
 
 import ModuleHeading from '@/components/common/ModuleHeading';
 import ModuleSearch from '@/components/common/ModuleSearch';
+import ModulePagination from '@/components/common/ModulePagination';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 
@@ -38,10 +39,12 @@ export default function DataSiswaPage() {
     );
   }
 
-  const eligibleSections = allClasses.filter(item => !levelFilter || item.tingkat === levelFilter);
+  const availableSections = [...new Set(
+    allClasses.filter(item => !levelFilter || item.tingkat === levelFilter).map(item => item.id.slice(1))
+  )];
   const targetClasses = allClasses.filter(cls => {
     if (levelFilter && cls.tingkat !== levelFilter) return false;
-    if (sectionFilter && cls.id !== sectionFilter) return false;
+    if (sectionFilter && cls.id.slice(1) !== sectionFilter) return false;
     return true;
   });
 
@@ -61,8 +64,9 @@ export default function DataSiswaPage() {
   const startIndex = (safePage - 1) * pageSize;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
 
-  const activeClassInfo = sectionFilter ? allClasses.find(c => c.id === sectionFilter) : null;
-  const titleSuffix = sectionFilter ? `Kelas ${sectionFilter}` : levelFilter ? `Kelas ${levelFilter}` : 'Semua Kelas';
+  const activeClassId = levelFilter && sectionFilter ? `${levelFilter}${sectionFilter}` : '';
+  const activeClassInfo = activeClassId ? allClasses.find(c => c.id === activeClassId) : null;
+  const titleSuffix = activeClassId ? `Kelas ${activeClassId}` : levelFilter ? `Kelas ${levelFilter}` : sectionFilter ? `Bagian ${sectionFilter}` : 'Semua Kelas';
 
   const handleSaveEdit = (event) => {
     event.preventDefault();
@@ -152,17 +156,15 @@ export default function DataSiswaPage() {
             aria-label="Bagian"
             value={sectionFilter}
             onChange={event => {
-              const classId = event.target.value;
-              setSectionFilter(classId);
-              if (classId) setLevelFilter(classId.slice(0, 1));
+              setSectionFilter(event.target.value);
               setCurrentPage(1);
             }}
             className="module-control"
           >
             <option value="">Bagian</option>
-            {eligibleSections.map(item => (
-              <option key={item.id} value={item.id}>
-                {levelFilter ? item.id.slice(1) : item.id}
+            {availableSections.map(sec => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>
@@ -300,78 +302,14 @@ export default function DataSiswaPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-600">
-            <select
-              aria-label="Jumlah baris per halaman"
-              value={pageSize}
-              onChange={event => { setPageSize(Number(event.target.value)); setCurrentPage(1); }}
-              className="module-control !h-8 !py-0 text-xs"
-            >
-              {[10, 20, 50, 100].map(size => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <span>
-              Menampilkan{' '}
-              <strong className="text-slate-800">
-                {filteredStudents.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredStudents.length)}
-              </strong>{' '}
-              dari <strong className="text-slate-800">{filteredStudents.length}</strong> siswa
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={safePage <= 1}
-              onClick={() => setCurrentPage(safePage - 1)}
-              title="Halaman Sebelumnya"
-              aria-label="Halaman Sebelumnya"
-              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <i aria-hidden="true" className="fa-solid fa-chevron-left text-[11px]" />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-              .reduce((acc, p, idx, arr) => {
-                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((item, idx) =>
-                item === '...' ? (
-                  <span key={`dots-${idx}`} className="px-1.5 text-slate-400 font-mono">...</span>
-                ) : (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setCurrentPage(item)}
-                    className={`inline-flex h-8 min-w-8 px-2 items-center justify-center rounded-xl border text-xs font-bold transition cursor-pointer ${
-                      item === safePage
-                        ? 'border-brand-600 bg-brand-600 text-white shadow-2xs'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
-
-            <button
-              type="button"
-              disabled={safePage >= totalPages}
-              onClick={() => setCurrentPage(safePage + 1)}
-              title="Halaman Berikutnya"
-              aria-label="Halaman Berikutnya"
-              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <i aria-hidden="true" className="fa-solid fa-chevron-right text-[11px]" />
-            </button>
-          </div>
-        </div>
+        <ModulePagination
+          totalItems={filteredStudents.length}
+          pageSize={pageSize}
+          onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+          currentPage={safePage}
+          onPageChange={setCurrentPage}
+          itemLabel="siswa"
+        />
       </div>
 
       {/* Modal Edit Siswa */}
