@@ -1,6 +1,6 @@
 export function teachingAssignments(teacher, subjects) {
   if (!teacher) return [];
-  if (Array.isArray(teacher.assignments)) return teacher.assignments;
+  if (Array.isArray(teacher.assignments) && teacher.assignments.length) return teacher.assignments;
   const subject = subjects.find(item => item.name === teacher.mapelNama);
   return subject && teacher.kelasWali ? [{ classId: teacher.kelasWali, subjectKey: subject.key }] : [];
 }

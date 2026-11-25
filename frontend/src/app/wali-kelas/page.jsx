@@ -50,12 +50,16 @@ export default function WaliKelasPage() {
     if (search.trim() && ![c.nama, c.wali, c.telp].join(' ').toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
   });
+  const targetClass = allClasses.find(c => c.id === editingClass?.targetClassId);
+  const targetLevels = [...new Set(allClasses.map(c => c.tingkat))].sort();
+  const targetSections = allClasses.filter(c => c.tingkat === editingClass?.targetLevel);
+  const isMovingAssignment = targetClass && targetClass.id !== editingClass.id;
 
   const handleSaveEditWali = (e) => {
     e.preventDefault();
-    if (!editingClass) return;
-    updateSingleWaliKelas(editingClass.id, editingClass.wali, editingClass.telp);
-    setEditingClass(null);
+    if (!editingClass || !targetClass) return;
+    const { id, wali, telp, targetClassId } = editingClass;
+    if (updateSingleWaliKelas(id, wali, telp, targetClassId)) setEditingClass(null);
   };
 
   const handleDeleteWali = (classId) => {
@@ -326,7 +330,13 @@ export default function WaliKelasPage() {
                           type="button"
                           onClick={() => {
                             setDeletingId(null);
-                            setEditingClass({ id: cls.id, wali: cls.wali, telp: cls.telp });
+                            setEditingClass({
+                              id: cls.id,
+                              targetLevel: cls.tingkat,
+                              targetClassId: cls.id,
+                              wali: cls.wali || '',
+                              telp: cls.telp || '',
+                            });
                           }}
                           className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                           title="Ubah Penugasan Guru"
@@ -374,6 +384,49 @@ export default function WaliKelasPage() {
             </div>
 
             <form onSubmit={handleSaveEditWali} className="space-y-3 text-xs">
+              <fieldset>
+                <legend className="text-[11px] font-bold text-slate-600 mb-2">
+                  Rombel tujuan
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-[11px] font-bold text-slate-600">
+                    Kelas
+                    <select
+                      value={editingClass.targetLevel}
+                      onChange={e => setEditingClass({ ...editingClass, targetLevel: e.target.value, targetClassId: '' })}
+                      className="module-control mt-1 w-full"
+                      required
+                    >
+                      {targetLevels.map(level => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[11px] font-bold text-slate-600">
+                    Bagian
+                    <select
+                      value={editingClass.targetClassId}
+                      onChange={e => setEditingClass({ ...editingClass, targetClassId: e.target.value })}
+                      aria-describedby={isMovingAssignment ? 'wali-move-summary' : undefined}
+                      className="module-control mt-1 w-full"
+                      required
+                    >
+                      <option value="" disabled>Pilih bagian</option>
+                      {targetSections.map(cls => (
+                        <option key={cls.id} value={cls.id}>{cls.id.slice(cls.tingkat.length)}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {isMovingAssignment && (
+                  <p id="wali-move-summary" className="mt-1 text-slate-600">
+                    {targetClass?.wali
+                      ? `Jika disimpan, ${targetClass.wali} akan menjadi wali kelas ${editingClass.id}.`
+                      : `Jika disimpan, rombel ${editingClass.id} akan kosong dari penugasan wali kelas.`}
+                  </p>
+                )}
+              </fieldset>
+
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 mb-1">Nama Wali Kelas:</label>
                 <input
@@ -410,7 +463,7 @@ export default function WaliKelasPage() {
                   className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
-                  <span>Simpan</span>
+                  <span>{isMovingAssignment ? (targetClass?.wali ? 'Tukar Penugasan' : 'Pindahkan Penugasan') : 'Simpan'}</span>
                 </button>
               </div>
             </form>

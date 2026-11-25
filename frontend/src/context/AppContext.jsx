@@ -12,6 +12,13 @@ import {
 } from '@/lib/masterData';
 
 const AppContext = createContext(null);
+const SCHOOL_SETTINGS_KEY = 'radistes_school_settings';
+
+function parseSchoolSettings(value) {
+  const saved = JSON.parse(value);
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return SCHOOL_INFO;
+  return { ...SCHOOL_INFO, ...saved };
+}
 
 export function AppProvider({ children }) {
   // Pengaturan Sekolah & Raport
@@ -85,6 +92,26 @@ export function AppProvider({ children }) {
   useEffect(() => {
     setLegerByClass(Object.fromEntries(DAFTAR_KELAS.map(item => [item.id, generateInitialLegerData(item.id)])));
 
+    try {
+      setSchoolSettings(parseSchoolSettings(localStorage.getItem(SCHOOL_SETTINGS_KEY)));
+    } catch (error) {
+      console.error(error);
+    }
+
+    let loadedTeachers = DAFTAR_GURU_SEKOLAH;
+    try {
+      const savedTeachers = localStorage.getItem('radistes_teachers_list');
+      if (savedTeachers) {
+        const parsedTeachers = JSON.parse(savedTeachers);
+        if (Array.isArray(parsedTeachers) && parsedTeachers.length > 0) {
+          loadedTeachers = parsedTeachers;
+          setTeachersList(parsedTeachers);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     // Cek sesi login aktif dari sessionStorage (atau localStorage)
     try {
       // Hapus data lama yang tersimpan otomatis sebelumnya agar diarahkan ke login
@@ -93,7 +120,11 @@ export function AppProvider({ children }) {
       const savedUser = sessionStorage.getItem('radistes_session_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        const resolved = resolveTeacherRole(parsed, DAFTAR_KELAS);
+        const latestTeacher = loadedTeachers.find(
+          t => t.username === parsed.username || t.id === parsed.id
+        );
+        const mergedUser = latestTeacher ? { ...parsed, ...latestTeacher } : parsed;
+        const resolved = resolveTeacherRole(mergedUser, DAFTAR_KELAS);
         setCurrentUser(resolved);
         if (resolved.role === 'walikelas' && resolved.kelasWali) {
           setSelectedClassId(resolved.kelasWali);
@@ -109,6 +140,40 @@ export function AppProvider({ children }) {
     setIsAuthLoaded(true);
   }, []);
 
+  // Simpan perubahan penugasan guru ke localStorage & sinkronkan antar tab
+  useEffect(() => {
+    if (!isAuthLoaded) return;
+    try {
+      localStorage.setItem('radistes_teachers_list', JSON.stringify(teachersList));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [teachersList, isAuthLoaded]);
+
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.storageArea === localStorage && (event.key === SCHOOL_SETTINGS_KEY || event.key === null)) {
+        try {
+          setSchoolSettings(parseSchoolSettings(localStorage.getItem(SCHOOL_SETTINGS_KEY)));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      if (event.key === 'radistes_teachers_list' && event.newValue) {
+        try {
+          const updated = JSON.parse(event.newValue);
+          if (Array.isArray(updated)) {
+            setTeachersList(updated);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Helper menampilkan Toast
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -116,6 +181,19 @@ export function AppProvider({ children }) {
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 3500);
+  };
+
+  const saveSchoolSettings = (settings) => {
+    if (currentUser?.role !== 'admin') return false;
+    try {
+      localStorage.setItem(SCHOOL_SETTINGS_KEY, JSON.stringify(settings));
+      setSchoolSettings(settings);
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Pengaturan gagal disimpan ke browser. Periksa ruang penyimpanan atau coba logo yang lebih kecil.', 'warning');
+      return false;
+    }
   };
 
   /**
@@ -347,10 +425,20 @@ export function AppProvider({ children }) {
   };
 
   // Update Penugasan Wali Kelas (Tunggal) - Otomatis merefleksikan role guru yang bersangkutan!
-  const updateSingleWaliKelas = (classId, waliName, telp) => {
+  const updateSingleWaliKelas = (classId, waliName, telp, targetClassId = classId) => {
+    const sourceClass = classesList.find(c => c.id === classId);
+    const targetClass = classesList.find(c => c.id === targetClassId);
+    if (!sourceClass || !targetClass || !waliName.trim()) {
+      showToast('Periksa nama wali kelas dan rombel tujuan.', 'warning');
+      return false;
+    }
+
     const updatedClasses = classesList.map(c => {
+      if (c.id === targetClassId) {
+        return { ...c, wali: waliName.trim(), telp: telp?.trim() || sourceClass.telp || '' };
+      }
       if (c.id === classId) {
-        return { ...c, wali: waliName, telp: telp || c.telp };
+        return { ...c, wali: targetClass.wali || '', telp: targetClass.wali ? targetClass.telp : '' };
       }
       return c;
     });
@@ -362,7 +450,8 @@ export function AppProvider({ children }) {
       setCurrentUser(reEvaluated);
     }
 
-    showToast(`Penugasan Wali Kelas ${classId} berhasil diperbarui menjadi ${waliName}!`, 'success');
+    showToast(`Penugasan Wali Kelas ${targetClassId} berhasil disimpan.`, 'success');
+    return true;
   };
 
   // Bulk Import Penugasan Wali Kelas dari Excel SK / Pengusulan
@@ -425,7 +514,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         schoolSettings,
-        setSchoolSettings,
+        saveSchoolSettings,
         currentUser,
         isAuthLoaded,
         teachersList,

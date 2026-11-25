@@ -3,6 +3,8 @@
 import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
+import { downloadExcelTemplate } from '@/lib/excelTemplate';
+import { calculateDknAverage, dknAverageFormula, dknStatusFormula, UH_COLUMNS } from '@/lib/dknScores';
 import { useApp } from '@/context/AppContext';
 
 export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', targetMapel = 'tik', fixedTarget = false, onImport }) {
@@ -45,7 +47,7 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
             const match = lineStr.match(/KELAS\s*[:\s]*([0-9][A-Z])/);
             if (match && match[1]) detectedClass = match[1];
           }
-          if (lineStr.includes('INFORMATIKA') || lineStr.includes('TIK')) {
+          if (/\b(?:INFORMATIKA|TIK)\b/.test(lineStr)) {
             detectedMapel = 'tik';
           } else if (lineStr.includes('MATEMATIKA')) {
             detectedMapel = 'mat';
@@ -70,8 +72,8 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
             if (['INDUK', 'NIS', 'NO INDUK'].includes(str)) {
               colIndexNis = idx;
             }
-            if (['N. R', 'N.R', 'RAPORT', 'N.PTS', 'NILAI', 'NILAI STS', 'NILAI RATA-RATA'].includes(str)) {
-              if (colIndexScore === -1 || ['N. R', 'NILAI RATA-RATA'].includes(str)) {
+            if (['N. R', 'N.R', 'RAPORT', 'N.PTS', 'NILAI', 'NILAI STS', 'RATA-RATA'].includes(str)) {
+              if (colIndexScore === -1 || ['N. R', 'RATA-RATA'].includes(str)) {
                 colIndexScore = idx;
               }
             }
@@ -82,6 +84,11 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
         // Fallback jika header tidak standar: gunakan kolom default DKN
         if (colIndexNama === -1) colIndexNama = 2; // Kolom ke-3 biasanya nama
         if (colIndexScore === -1) colIndexScore = 6; // Kolom ke-7 biasanya N.R
+
+        const headers = (rows[headerRowIndex] || []).map(value => String(value || '').trim().toUpperCase());
+        const stsIndex = headers.indexOf('NILAI STS');
+        const uhIndexes = UH_COLUMNS.map(column => headers.indexOf(column.label));
+        const isSetorTemplate = wsname === 'DKN' && stsIndex !== -1 && uhIndexes.every(index => index !== -1);
 
         // Ekstrak baris siswa
         const parsed = [];
@@ -97,6 +104,17 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
 
           // Abaikan baris kosong atau baris keterangan bawah
           if (!rawNama || rawNama === '-' || rawNama.toUpperCase().includes('JUMLAH') || rawNama.toUpperCase().includes('RATA')) {
+            continue;
+          }
+
+          const scoreCell = XLSX.utils.encode_cell({ r: i, c: colIndexScore });
+          if (isSetorTemplate && (ws[scoreCell]?.f || rawScore == null || rawScore === '')) {
+            const sts = row[stsIndex] ?? '';
+            const uhScores = Object.fromEntries(UH_COLUMNS.map((column, index) => [column.key, row[uhIndexes[index]] ?? '']));
+            const score = calculateDknAverage(sts, Object.values(uhScores));
+            if (score !== '') {
+              parsed.push({ no: parsed.length + 1, nis: rawNis !== '-' ? rawNis : '', nama: rawNama, score, sts, uhScores });
+            }
             continue;
           }
 
@@ -148,31 +166,53 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
   };
 
   // Unduh contoh file DKN Excel (format contoh user)
-  const handleDownloadSample = () => {
+  const handleDownloadSample = async () => {
+    const kkm = 70;
+    const sampleGrades = [
+      ['240701', 'AINUN HIKMAWAH', 76, 75],
+      ['240702', 'AMIRA HASNA HAKIMAH', 73, 72],
+      ['240703', 'ARINA NAJMA AQILA', 73, 72],
+      ['240704', 'ARIQAH RIZQULLOHI NUR AINI', 74, 73],
+      ['240705', 'ATHAYA KHOIRUNNISA', 79, 78],
+      ['240706', 'ATSNA FAIZA LIULIN NUHA', 80, 79],
+      ['240707', 'AYUNDA SOFI AZZAHRA', 72, 71],
+      ['240708', 'AZIKA MALIDA AGISTA', 70, 70],
+      ['240709', 'AZKIYA AMALIA WIRDA', 80, 79],
+      ['240710', 'AZZAHRA ANNISA US SHOLIHAH', 86, 85],
+    ];
+    const averages = sampleGrades.map(([, , uh1, sts]) => calculateDknAverage(sts, [uh1], false));
+    const ranks = `$G$7:$G$${sampleGrades.length + 6}`;
     const wsData = [
       ['DAFTAR NILAI STS GANJIL', '', '', 'UH', ': U. Harian', 'N. R', ': Nilai Raport'],
       ['MTs AL AMRIYYAH BLOKAGUNG', '', '', 'N.PTS', ': Nilai PTS'],
       ['TAHUN PELAJARAN 2025/2026'],
       [],
-      ['KELAS', '', selectedClass, 'MAPEL:', 'INFORMATIKA', '', 'KKM :', '', 70.0],
+      ['KELAS', '', selectedClass, 'MAPEL:', 'INFORMATIKA', '', 'KKM :', '', kkm],
       ['NO', 'INDUK', 'NAMA', 'UH 1', 'UH 2', 'N.PTS', 'N. R', 'RANK', 'KET'],
-      [1, '240701', 'AINUN HIKMAWAH', 76, '', 75, 75.5, 1, 'TUNTAS'],
-      [2, '240702', 'AMIRA HASNA HAKIMAH', 73, '', 72, 72.5, 2, 'TUNTAS'],
-      [3, '240703', 'ARINA NAJMA AQILA', 73, '', 72, 72.5, 3, 'TUNTAS'],
-      [4, '240704', 'ARIQAH RIZQULLOHI NUR AINI', 74, '', 73, 73.5, 4, 'TUNTAS'],
-      [5, '240705', 'ATHAYA KHOIRUNNISA', 79, '', 78, 78.5, 5, 'TUNTAS'],
-      [6, '240706', 'ATSNA FAIZA LIULIN NUHA', 80, '', 79, 79.5, 6, 'TUNTAS'],
-      [7, '240707', 'AYUNDA SOFI AZZAHRA', 72, '', 71, 71.5, 7, 'TUNTAS'],
-      [8, '240708', 'AZIKA MALIDA AGISTA', 70, '', 70, 70.0, 8, 'TUNTAS'],
-      [9, '240709', 'AZKIYA AMALIA WIRDA', 80, '', 79, 79.5, 9, 'TUNTAS'],
-      [10, '240710', 'AZZAHRA ANNISA US SHOLIHAH', 86, '', 85, 85.5, 10, 'TUNTAS']
+      ...sampleGrades.map(([nis, nama, uh1, sts], index) => {
+        const row = index + 7;
+        const average = averages[index];
+        return [
+          index + 1, nis, nama, uh1, null, sts,
+          { formula: dknAverageFormula(`F${row}`, `D${row}:F${row}`, false), result: average },
+          { formula: `IF(G${row}="","",RANK(G${row},${ranks},0))`, result: 1 + averages.filter(score => score > average).length },
+          { formula: dknStatusFormula(`G${row}`, '$I$5', 'TUNTAS', 'BELUM TUNTAS'), result: average >= kkm ? 'TUNTAS' : 'BELUM TUNTAS' },
+        ];
+      }),
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DAFTAR NILAI STS");
-    XLSX.writeFile(wb, `CONTOH_FORMAT_DKN_${selectedClass}.xlsx`);
-    showToast('File contoh DKN berhasil diunduh!', 'info');
+    const downloaded = await downloadExcelTemplate({
+      rows: wsData,
+      sheetName: 'DAFTAR NILAI STS',
+      fileName: `CONTOH_FORMAT_DKN_${selectedClass}.xlsx`,
+      widths: [9, 15, 36, 12, 18, 12, 17, 10, 16],
+      headerRow: 5,
+      titleRows: [0],
+      merges: ['A1:C1', 'A2:C2', 'A3:C3'],
+      textColumns: [1],
+      inputColumns: [3, 4, 5],
+    }, showToast);
+    if (downloaded) showToast('File contoh DKN berhasil diunduh!', 'info');
   };
 
   return (

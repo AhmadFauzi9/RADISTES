@@ -5,13 +5,15 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 
 export default function PengaturanPage() {
-  const { schoolSettings, setSchoolSettings, showToast, isSuperAdmin } = useApp();
+  const { schoolSettings, saveSchoolSettings, showToast, isSuperAdmin } = useApp();
 
-  const [formData, setFormData] = useState({ ...schoolSettings });
+  const [draft, setDraft] = useState({});
+  const [isReadingLogo, setIsReadingLogo] = useState(false);
+  const formData = { ...schoolSettings, ...draft };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setDraft(prev => ({
       ...prev,
       [name]: value
     }));
@@ -19,7 +21,8 @@ export default function PengaturanPage() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    setSchoolSettings(formData);
+    if (isReadingLogo || !saveSchoolSettings(formData)) return;
+    setDraft({});
     showToast('Pengaturan lembaga & format raport STS berhasil diperbarui!', 'success');
   };
 
@@ -48,17 +51,24 @@ export default function PengaturanPage() {
             </label>
             <label className="space-y-1 font-semibold text-slate-700">
               <span className="block">Logo kop raport</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {
+              <input type="file" accept="image/png,image/jpeg,image/webp" disabled={isReadingLogo} onChange={event => {
                 const file = event.target.files[0];
                 if (!file) return;
+                event.target.value = '';
                 if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 1024 * 1024) {
                   showToast('Gunakan logo PNG, JPEG, atau WebP maksimal 1 MB.', 'warning');
                   return;
                 }
                 const reader = new FileReader();
-                reader.onload = () => setFormData(previous => ({ ...previous, logoKop: reader.result }));
+                setIsReadingLogo(true);
+                reader.onload = () => setDraft(previous => ({ ...previous, logoKop: reader.result }));
+                reader.onerror = () => showToast('Logo gagal dibaca. Pilih ulang file logo.', 'warning');
+                reader.onloadend = () => setIsReadingLogo(false);
                 reader.readAsDataURL(file);
               }} />
+              {formData.logoKop && (
+                <img src={formData.logoKop} alt="Pratinjau logo kop raport" className="h-14 w-14 object-contain" />
+              )}
             </label>
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Yayasan / Naungan:</label>
@@ -201,7 +211,8 @@ export default function PengaturanPage() {
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button data-module-action
             type="submit"
-            className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
+            disabled={isReadingLogo}
+            className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer disabled:opacity-50"
           title="Simpan Pengaturan Raport"
           aria-label="Simpan Pengaturan Raport"
           >

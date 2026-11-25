@@ -3,11 +3,12 @@
 import ModuleSearch from '@/components/common/ModuleSearch';
 import ModuleHeading from '@/components/common/ModuleHeading';
 import ModulePagination from '@/components/common/ModulePagination';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
 import PrintableRaport from '@/components/raport/PrintableRaport';
+import { waitForRaportImages } from '@/lib/raportPrint';
 
 export default function CetakRaportPage() {
   const {
@@ -29,6 +30,7 @@ export default function CetakRaportPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [printJob, setPrintJob] = useState(null);
+  const printRaportRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
@@ -90,10 +92,19 @@ export default function CetakRaportPage() {
     student.ranking ?? ''
   ]);
 
-  function print(kind, student) {
+  async function print(kind, student) {
+    if (printJob) return;
     flushSync(() => setPrintJob({ kind, students: student ? [student] : filtered }));
-    try { window.print(); }
-    finally { setPrintJob(null); }
+    try {
+      if (kind === 'raport' && schoolSettings.logoKop) {
+        const printArea = printRaportRef.current;
+        await waitForRaportImages(printArea);
+        if (!printArea || printRaportRef.current !== printArea) return;
+      }
+      window.print();
+    } finally {
+      setPrintJob(null);
+    }
   }
 
   function downloadLeger() {
@@ -460,7 +471,7 @@ export default function CetakRaportPage() {
 
       {/* Print Output: Raport */}
       {printJob?.kind === 'raport' && (
-        <div className="hidden print-only">
+        <div ref={printRaportRef} className="hidden print-only">
           {printJob.students.map((student, index) => (
             <div key={`${student.studentClassId}-${student.nis}`} className={index < printJob.students.length - 1 ? 'print-page-break' : undefined}>
               <PrintableRaport

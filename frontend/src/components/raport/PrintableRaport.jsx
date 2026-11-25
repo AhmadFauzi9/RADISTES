@@ -7,6 +7,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
   if (!student) return null;
 
   const grades = student.grades || {};
+  const fullAddress = schoolSettings.alamatLengkap?.trim();
 
   // Kelompokkan mapel sesuai format resmi Excel MTs Al Amiriyyah
   const agamaList = [
@@ -64,28 +65,35 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
     <div className="print-container bg-white text-black p-6 sm:p-8 max-w-[210mm] mx-auto text-xs leading-normal select-text font-serif border border-slate-300 shadow-lg print:shadow-none print:border-none print:p-0">
       
       {/* KOP SURAT RESMI LEMBAGA */}
-      <div className="text-center relative pb-2 mb-2">
-        {schoolSettings.logoKop && <img src={schoolSettings.logoKop} alt="Logo madrasah" className="mx-auto mb-2 h-14 w-14 object-contain" />}
-        <h3 className="text-[13px] font-bold tracking-wide uppercase">
-          {schoolSettings.yayasan}
-        </h3>
-        <h1 className="text-[17px] font-extrabold tracking-wider uppercase text-black my-0.5">
-          {schoolSettings.namaMadrasah}
-        </h1>
-        <p className="text-[10px] font-mono font-semibold tracking-wider">
-          NSM : {schoolSettings.nsm} &nbsp;&nbsp;&nbsp;&nbsp; NPSN : {schoolSettings.npsn}
+      <header className="mb-2 text-center">
+        <div className="grid grid-cols-[14%_minmax(0,1fr)_14%] items-center gap-x-1 pb-1 sm:gap-x-2 print:gap-x-2">
+          {schoolSettings.logoKop && (
+            <img
+              src={schoolSettings.logoKop}
+              alt="Logo madrasah"
+              className="col-start-1 row-start-1 mx-auto h-auto max-h-24 w-full max-w-24 object-contain"
+            />
+          )}
+          <div className="col-start-2 row-start-1 py-1">
+            <p className="font-sans text-[10px] font-bold uppercase leading-tight sm:text-[15px] print:text-[15px]">
+              {schoolSettings.yayasan}
+            </p>
+            <h1 className="my-0.5 text-[16px] font-bold leading-tight sm:text-[24px] print:text-[24px]">
+              {schoolSettings.namaMadrasah}
+            </h1>
+            <p className="flex flex-wrap justify-center gap-x-3 text-[10px] leading-tight sm:text-[13px] print:text-[13px]">
+              <span>NSM : {schoolSettings.nsm}</span>
+              <span>NPSN : {schoolSettings.npsn}</span>
+            </p>
+            <p className="mt-0.5 font-sans text-[11px] leading-tight sm:text-[13px] print:text-[13px]">
+              {schoolSettings.alamatKop}
+            </p>
+          </div>
+        </div>
+        <p className="border-y border-black px-1 py-0.5 font-sans text-[8px] italic leading-tight sm:text-[9px] print:text-[8px]">
+          {fullAddress && (/^alamat\s*:/i.test(fullAddress) ? fullAddress : `Alamat: ${fullAddress}`)}
         </p>
-        <p className="text-[10px] font-semibold">
-          {schoolSettings.alamatKop}
-        </p>
-        <p className="text-[8.5px] text-gray-700 mt-0.5 leading-tight">
-          {schoolSettings.alamatLengkap}
-        </p>
-        
-        {/* Garis Pembatas Kop Surat (Double line) */}
-        <div className="mt-2 border-b-2 border-black"></div>
-        <div className="mt-0.5 border-b border-black"></div>
-      </div>
+      </header>
 
       {/* JUDUL RAPORT */}
       <div className="text-center my-3">
@@ -179,7 +187,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
             </td>
           </tr>
           <tr className="border-b border-black font-bold text-[11px] bg-gray-50">
-            <td colSpan="3" className="border-r border-black text-center py-1 px-2">Nilai Rata-rata</td>
+            <td colSpan="3" className="border-r border-black text-center py-1 px-2">Rata-rata</td>
             <td className="border-r border-black text-center py-1 font-mono">{student.rataRata || 0}</td>
             <td colSpan="2" className="py-1 px-2 text-[10px] italic">
               {student.rataRata ? terbilangNilai(Math.round(student.rataRata)) : '-'}

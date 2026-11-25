@@ -77,22 +77,13 @@ export default function DashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {!isGuruMapelOnly ? (
-              <>
-                <Link
-                  href="/leger"
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
-                >
-                  <i className="fa-solid fa-table-list"></i>
-                  <span>Buka Leger Nilai {selectedClassId}</span>
-                </Link>
-                <Link
-                  href="/cetak-raport"
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer"
-                >
-                  <i className="fa-solid fa-print"></i>
-                  <span>Cetak Raport PDF</span>
-                </Link>
-              </>
+              <Link
+                href="/cetak-raport"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer"
+              >
+                <i className="fa-solid fa-print"></i>
+                <span>Cetak Raport PDF</span>
+              </Link>
             ) : (
               <Link
                 href="/setor-nilai"

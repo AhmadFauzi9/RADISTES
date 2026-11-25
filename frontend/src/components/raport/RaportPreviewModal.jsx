@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useApp } from '@/context/AppContext';
+import { waitForRaportImages } from '@/lib/raportPrint';
 import PrintableRaport from './PrintableRaport';
 
 export default function RaportPreviewModal() {
@@ -15,6 +16,7 @@ export default function RaportPreviewModal() {
     legerByClass,
     schoolSettings, 
   } = useApp();
+  const contentRef = useRef(null);
 
   if (!isPreviewOpen || !previewStudent) return null;
   const activeClassInfo = allClasses.find(item => item.id === previewClassId);
@@ -25,7 +27,12 @@ export default function RaportPreviewModal() {
   const prevStudent = currentIndex > 0 ? currentLeger[currentIndex - 1] : null;
   const nextStudent = currentIndex < currentLeger.length - 1 ? currentLeger[currentIndex + 1] : null;
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (schoolSettings.logoKop) {
+      const content = contentRef.current;
+      await waitForRaportImages(content);
+      if (!content || contentRef.current !== content) return;
+    }
     window.print();
   };
 
@@ -104,7 +111,7 @@ export default function RaportPreviewModal() {
         </div>
 
         {/* Modal Body / Printable Raport Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 print:bg-white print:p-0 custom-scrollbar">
+        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 print:bg-white print:p-0 custom-scrollbar">
           <PrintableRaport
             student={previewStudent}
             schoolSettings={schoolSettings}

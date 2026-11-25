@@ -3,6 +3,7 @@
 import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
+import { downloadExcelTemplate } from '@/lib/excelTemplate';
 import { useApp } from '@/context/AppContext';
 
 export default function ImportWaliKelasModal({ isOpen, onClose }) {
@@ -87,17 +88,21 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
   };
 
   // Unduh Template Excel SK Penugasan Wali Kelas
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     const wsData = [
       ['KELAS', 'WALI KELAS', 'NO TELPON'],
       ...allClasses.map(c => [c.nama, c.wali, c.telp])
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "PENUGASAN WALI KELAS");
-    XLSX.writeFile(wb, "TEMPLATE_PENUGASAN_WALI_KELAS_49_KELAS.xlsx");
-    showToast('Template penugasan wali kelas berhasil diunduh!', 'info');
+    const downloaded = await downloadExcelTemplate({
+      rows: wsData,
+      sheetName: 'PENUGASAN WALI KELAS',
+      fileName: 'TEMPLATE_PENUGASAN_WALI_KELAS_49_KELAS.xlsx',
+      widths: [14, 42, 23],
+      textColumns: [0, 2],
+      inputColumns: [1, 2],
+    }, showToast);
+    if (downloaded) showToast('Template penugasan wali kelas berhasil diunduh!', 'info');
   };
 
   return (

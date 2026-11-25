@@ -2,11 +2,14 @@
 
 import ModuleSearch from '@/components/common/ModuleSearch';
 import ModuleHeading from '@/components/common/ModuleHeading';
-import { useState } from 'react';
+import ModulePagination from '@/components/common/ModulePagination';
+import TeacherAssignmentFields from '@/components/grades/TeacherAssignmentFields';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
+import { downloadExcelTemplate } from '@/lib/excelTemplate';
 import { useApp } from '@/context/AppContext';
 
-const empty = { kode: '', nama: '', kelas: '', mapel: '' };
+const empty = { kode: '', nama: '', mapel: '', classIds: [] };
 
 export default function GuruMapelPage() {
   const { isSuperAdmin, teachersList, setTeachersList, allClasses, allMapel, showToast } = useApp();
@@ -14,6 +17,10 @@ export default function GuruMapelPage() {
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const tableViewportRef = useRef(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFileName, setImportFileName] = useState('');
@@ -83,19 +90,24 @@ export default function GuruMapelPage() {
 
   function handleUpdateAssignment(event) {
     event.preventDefault();
-    if (!editing || !editing.nama.trim() || !editing.kelas || !editing.mapel) return;
+    if (!editing) return;
+    const { teacherUsername, oldSubjectKey, nama, mapel, classIds } = editing;
+    if (!nama.trim() || !allMapel.some(subject => subject.key === mapel) ||
+      !classIds.length || classIds.some(id => !allClasses.some(item => item.id === id))) {
+      showToast('Isi nama guru dan mapel, lalu pilih minimal satu rombel yang tersedia.', 'warning');
+      return;
+    }
+    const selectedClasses = new Set(classIds);
     setTeachersList(previous =>
       previous.map(teacher => {
-        if (teacher.username !== editing.teacherUsername) return teacher;
+        if (teacher.username !== teacherUsername) return teacher;
         const filteredAssignments = (teacher.assignments || []).filter(
-          a =>
-            !(a.classId === editing.oldClassId && a.subjectKey === editing.oldSubjectKey) &&
-            !(a.classId === editing.kelas && a.subjectKey === editing.mapel)
+          a => a.subjectKey !== oldSubjectKey && !(a.subjectKey === mapel && selectedClasses.has(a.classId))
         );
         return {
           ...teacher,
-          nama: editing.nama.trim(),
-          assignments: [...filteredAssignments, { classId: editing.kelas, subjectKey: editing.mapel }],
+          nama: nama.trim(),
+          assignments: [...filteredAssignments, ...Array.from(selectedClasses, classId => ({ classId, subjectKey: mapel }))],
         };
       })
     );
@@ -132,14 +144,20 @@ export default function GuruMapelPage() {
   }
 
   function downloadTemplate() {
-    const sheet = XLSX.utils.aoa_to_sheet([
+    const rows = [
       ['kode', 'nama', 'kelas', 'mapel'],
       ['budi', 'Budi Santoso, S.Pd', '8A', 'mat'],
       ['hendra', 'Hendra Wijaya, S.Kom', '7K', 'tik'],
-    ]);
-    const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, 'Template');
-    XLSX.writeFile(book, 'template-penugasan-guru.xlsx');
+    ];
+    return downloadExcelTemplate({
+      rows,
+      sheetName: 'Template',
+      fileName: 'template-penugasan-guru.xlsx',
+      widths: [18, 38, 12, 26],
+      textColumns: [0, 2, 3],
+      inputColumns: [0, 1, 2, 3],
+      filter: false,
+    }, showToast);
   }
 
   const availableSections = [...new Set(
@@ -151,15 +169,24 @@ export default function GuruMapelPage() {
     .flatMap(teacher => {
       const matching = (teacher.assignments || []).filter(a =>
         (!levelFilter || a.classId.startsWith(levelFilter)) &&
-        (!classFilter || a.classId.slice(1) === classFilter)
+        (!classFilter || a.classId.slice(1) === classFilter) &&
+        (!subjectFilter || a.subjectKey === subjectFilter)
       );
       return matching.length
         ? matching.map(a => ({ ...a, teacher }))
-        : (levelFilter || classFilter) ? [] : [{ teacher }];
+        : (levelFilter || classFilter || subjectFilter) ? [] : [{ teacher }];
     });
 
   const totalGuru = new Set(visible.map(r => r.teacher.username)).size;
   const totalPenugasan = visible.filter(r => r.classId).length;
+  const safePage = Math.min(currentPage, Math.max(1, Math.ceil(visible.length / pageSize)));
+  const startIndex = (safePage - 1) * pageSize;
+  const pageRows = visible.slice(startIndex, startIndex + pageSize);
+
+  function changePage(page) {
+    setCurrentPage(page);
+    if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
+  }
 
   return (
     <div className="space-y-4">
@@ -169,7 +196,7 @@ export default function GuruMapelPage() {
         <ModuleHeading
           label="Data Master"
           title="Penugasan Guru Mata Pelajaran"
-          description="Kelola kode guru, nama, kelas, dan mata pelajaran yang diampu. Import dari Excel atau tambah satu per satu."
+          description="Kelola penugasan mata pelajaran di satu atau beberapa rombel. Tambahkan lewat formulir atau impor dari Excel."
         />
 
         {/* Statistik Ringkas */}
@@ -202,7 +229,11 @@ export default function GuruMapelPage() {
             aria-label="Kelas"
             className="module-control"
             value={levelFilter}
-            onChange={event => { setLevelFilter(event.target.value); setClassFilter(''); }}
+            onChange={event => {
+              setLevelFilter(event.target.value);
+              setClassFilter('');
+              changePage(1);
+            }}
           >
             <option value="">Kelas</option>
             {['7', '8', '9'].map(l => <option key={l} value={l}>{l}</option>)}
@@ -214,7 +245,8 @@ export default function GuruMapelPage() {
             value={classFilter}
             onChange={event => {
               setClassFilter(event.target.value);
-            }}            
+              changePage(1);
+            }}
           >
             <option value="">Bagian</option>
             {availableSections.map(sec => (
@@ -223,12 +255,27 @@ export default function GuruMapelPage() {
               </option>
             ))}
           </select>
+          <select
+            aria-label="Filter mata pelajaran"
+            className="module-control min-w-0 max-w-full"
+            value={subjectFilter}
+            onChange={event => {
+              setSubjectFilter(event.target.value);
+              changePage(1);
+            }}
+          >
+            <option value="">Semua Mapel</option>
+            {allMapel.map(subject => <option key={subject.key} value={subject.key}>{subject.name}</option>)}
+          </select>
           
           <ModuleSearch
             aria-label="Cari guru"
             placeholder="Cari nama atau kode guru..."
             value={search}
-            onChange={event => setSearch(event.target.value)}
+            onChange={event => {
+              setSearch(event.target.value);
+              changePage(1);
+            }}
           />
         </div>
 
@@ -264,7 +311,7 @@ export default function GuruMapelPage() {
           <span className="text-slate-400 text-[11px] font-mono">*Gunakan tombol + atau impor pada toolbar di atas</span>
         </div>
 
-        <div className="overflow-x-auto custom-scrollbar max-h-[560px]">
+        <div ref={tableViewportRef} className="overflow-x-auto custom-scrollbar max-h-[560px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-10 border-b border-slate-300">
               <tr>
@@ -284,14 +331,14 @@ export default function GuruMapelPage() {
                     Tidak ada guru yang sesuai dengan filter.
                   </td>
                 </tr>
-              ) : visible.map(({ teacher, classId, subjectKey }, idx) => {
+              ) : pageRows.map(({ teacher, classId, subjectKey }, idx) => {
                 const rowKey = [teacher.id, classId, subjectKey].join(':');
                 const isDeleting = deletingKey === rowKey;
                 const mapelName = allMapel.find(m => m.key === subjectKey)?.name || teacher.mapelNama || '–';
 
                 return (
                   <tr key={rowKey} className={`hover:bg-brand-50/40 transition group text-slate-700 ${isDeleting ? 'bg-rose-50' : ''}`}>
-                    <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{idx + 1}</td>
+                    <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
                     <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{teacher.username}</td>
                     <td className="py-2 px-4 font-bold text-slate-800">
                       <div className="flex items-center gap-1.5">
@@ -342,11 +389,12 @@ export default function GuruMapelPage() {
                               setDeletingKey(null);
                               setEditing({
                                 teacherUsername: teacher.username,
-                                oldClassId: classId || '',
                                 oldSubjectKey: subjectKey || '',
                                 nama: teacher.nama,
-                                kelas: classId || allClasses[0]?.id || '',
-                                mapel: subjectKey || allMapel[0]?.key || '',
+                                mapel: subjectKey || '',
+                                classIds: [...new Set((teacher.assignments || [])
+                                  .filter(assignment => assignment.subjectKey === subjectKey && allClasses.some(c => c.id === assignment.classId))
+                                  .map(assignment => assignment.classId))],
                               });
                             }}
                             title="Edit Penugasan"
@@ -376,6 +424,17 @@ export default function GuruMapelPage() {
             </tbody>
           </table>
         </div>
+        <ModulePagination
+          totalItems={visible.length}
+          pageSize={pageSize}
+          onPageSizeChange={size => {
+            setPageSize(size);
+            changePage(1);
+          }}
+          currentPage={safePage}
+          onPageChange={changePage}
+          itemLabel="baris"
+        />
       </div>
 
       {/* Modal Edit Penugasan Guru */}
@@ -387,7 +446,7 @@ export default function GuruMapelPage() {
                 compact
                 label="Edit Data"
                 title={`Edit Penugasan (${editing.teacherUsername})`}
-                description="Perbarui nama guru, kelas, atau mata pelajaran yang diampu."
+                description="Perbarui semua rombel untuk penugasan mapel yang dibuka."
               />
               <button
                 type="button"
@@ -413,33 +472,7 @@ export default function GuruMapelPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 block">Kelas</label>
-                  <select
-                    required
-                    aria-label="Kelas"
-                    className="module-control w-full"
-                    value={editing.kelas}
-                    onChange={event => setEditing({ ...editing, kelas: event.target.value })}
-                  >
-                    {allClasses.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 block">Mata Pelajaran</label>
-                  <select
-                    required
-                    aria-label="Mata pelajaran"
-                    className="module-control w-full"
-                    value={editing.mapel}
-                    onChange={event => setEditing({ ...editing, mapel: event.target.value })}
-                  >
-                    {allMapel.map(item => <option key={item.key} value={item.key}>{item.code}. {item.name}</option>)}
-                  </select>
-                </div>
-              </div>
+              <TeacherAssignmentFields classes={allClasses} subjects={allMapel} value={editing} onChange={setEditing} />
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
@@ -471,7 +504,7 @@ export default function GuruMapelPage() {
                 compact
                 label="Penugasan Baru"
                 title="Tambah Penugasan Guru Mapel"
-                description="Masukkan kode guru, nama lengkap, kelas, dan mata pelajaran yang diampu."
+                description="Masukkan data guru, pilih mata pelajaran, lalu centang semua rombel yang diampu."
               />
               <button
                 type="button"
@@ -488,7 +521,8 @@ export default function GuruMapelPage() {
               className="space-y-3"
               onSubmit={event => {
                 event.preventDefault();
-                if (saveRows([form])) setIsAddModalOpen(false);
+                const rows = form.classIds.map(kelas => ({ kode: form.kode, nama: form.nama, kelas, mapel: form.mapel }));
+                if (saveRows(rows)) setIsAddModalOpen(false);
               }}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -504,53 +538,19 @@ export default function GuruMapelPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 block">Kelas</label>
-                  <select
+                  <label className="text-[11px] font-bold text-slate-600 block">Nama Lengkap Guru</label>
+                  <input
                     required
-                    aria-label="Kelas"
+                    aria-label="Nama guru"
+                    placeholder="Nama lengkap beserta gelar"
                     className="module-control w-full"
-                    value={form.kelas}
-                    onChange={event => setForm({ ...form, kelas: event.target.value })}
-                  >
-                    <option value="">Pilih Kelas</option>
-                    <optgroup label="Kelas 7">
-                      {allClasses.filter(c => c.tingkat === '7').map(c => <option key={c.id}>{c.id}</option>)}
-                    </optgroup>
-                    <optgroup label="Kelas 8">
-                      {allClasses.filter(c => c.tingkat === '8').map(c => <option key={c.id}>{c.id}</option>)}
-                    </optgroup>
-                    <optgroup label="Kelas 9">
-                      {allClasses.filter(c => c.tingkat === '9').map(c => <option key={c.id}>{c.id}</option>)}
-                    </optgroup>
-                  </select>
+                    value={form.nama}
+                    onChange={event => setForm({ ...form, nama: event.target.value })}
+                  />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 block">Nama Lengkap Guru</label>
-                <input
-                  required
-                  aria-label="Nama guru"
-                  placeholder="Nama lengkap beserta gelar"
-                  className="module-control w-full"
-                  value={form.nama}
-                  onChange={event => setForm({ ...form, nama: event.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 block">Mata Pelajaran</label>
-                <select
-                  required
-                  aria-label="Mapel"
-                  className="module-control w-full"
-                  value={form.mapel}
-                  onChange={event => setForm({ ...form, mapel: event.target.value })}
-                >
-                  <option value="">Pilih Mata Pelajaran</option>
-                  {allMapel.map(item => <option key={item.key} value={item.key}>{item.code}. {item.name}</option>)}
-                </select>
-              </div>
+              <TeacherAssignmentFields classes={allClasses} subjects={allMapel} value={form} onChange={setForm} />
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button

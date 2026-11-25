@@ -2,6 +2,7 @@
 
 import ModuleSearch from '@/components/common/ModuleSearch';
 import ModuleHeading from '@/components/common/ModuleHeading';
+import ScrollableTableCard from '@/components/common/ScrollableTableCard';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
@@ -315,24 +316,25 @@ export default function LegerPage() {
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto custom-scrollbar max-h-[620px]">
+        <div className="p-2 sm:p-3">
+          <ScrollableTableCard label="tabel Leger" viewportClassName="max-h-[620px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-20 shadow-xs">
               <tr className="border-b border-slate-300">
-                <th className="py-2 px-2 text-center border-r border-slate-200 w-10 sticky left-0 bg-slate-100 z-30">No</th>
-                <th className="py-2 px-2 border-r border-slate-200 w-20 sticky left-10 bg-slate-100 z-30">NIS</th>
-                <th className="py-2 px-3 border-r border-slate-200 min-w-[200px] sticky left-30 bg-slate-100 z-30">Nama Siswa</th>
-                <th className="py-2 px-1 text-center border-r border-slate-200 w-8">L/P</th>
-                <th className="py-2 px-2 text-center border-r border-slate-200 w-16 bg-brand-50/60 text-brand-900">Kelas</th>
+                <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 w-10 sticky left-0 bg-slate-100 z-30">No</th>
+                <th rowSpan={2} scope="col" className="py-2 px-2 align-middle border-r border-slate-200 w-20 sticky left-10 bg-slate-100 z-30">NIS</th>
+                <th rowSpan={2} scope="col" className="py-2 px-3 align-middle border-r border-slate-200 min-w-[200px] sticky left-30 bg-slate-100 z-30">Nama Siswa</th>
+                <th rowSpan={2} scope="col" className="py-2 px-1 text-center align-middle border-r border-slate-200 w-8">L/P</th>
+                <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 w-16 bg-brand-50/60 text-brand-900">Kelas</th>
 
                 {activeTab === 'nilai' ? (
                   <>
                     <th colSpan="17" className="py-1 px-2 text-center border-r border-slate-200 bg-brand-50 text-brand-900">
                       Nilai Setiap Mata Pelajaran (Skala 0 - 100)
                     </th>
-                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Jumlah</th>
-                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Rerata</th>
-                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50 text-amber-900 w-14">Rank</th>
+                    <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Jumlah</th>
+                    <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Rata-rata</th>
+                    <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-amber-50 text-amber-900 w-14">Rank</th>
                   </>
                 ) : (
                   <>
@@ -343,27 +345,20 @@ export default function LegerPage() {
                   </>
                 )}
 
-                <th className="py-2 px-2 text-center w-24 sticky right-0 bg-slate-100 z-30">Aksi</th>
+                <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle w-24 sticky right-0 bg-slate-100 z-30">Aksi</th>
               </tr>
 
               <tr className="border-b border-slate-300 text-[10px] bg-slate-200/80">
-                <th className="border-r border-slate-300 sticky left-0 bg-slate-200/80 z-30"></th>
-                <th className="border-r border-slate-300 sticky left-10 bg-slate-200/80 z-30"></th>
-                <th className="border-r border-slate-300 sticky left-30 bg-slate-200/80 z-30"></th>
-                <th className="border-r border-slate-300"></th>
-                <th className="border-r border-slate-300"></th>
-
                 {activeTab === 'nilai' ? (
-                  <>
-                    {allMapel.map(m => (
-                      <th key={m.key} className="py-1 px-1 text-center border-r border-slate-300 min-w-[48px] max-w-[60px]" title={m.name}>
-                        <div className="font-extrabold truncate">{m.short}</div>
-                      </th>
-                    ))}
-                    <th className="py-1 px-1 text-center border-r border-slate-300 text-slate-500 font-mono">Total</th>
-                    <th className="py-1 px-1 text-center border-r border-slate-300 text-slate-500 font-mono">Avg</th>
-                    <th className="py-1 px-1 text-center border-r border-slate-300 text-slate-500 font-mono">1..N</th>
-                  </>
+                  allMapel.map(m => (
+                    <th key={m.key} scope="col" className="py-1 px-1 text-center border-r border-slate-300 min-w-[48px] max-w-[60px]" title={m.name}>
+                      <div className="flex items-center justify-center">
+                        <span className="shrink-0 whitespace-nowrap font-extrabold [writing-mode:vertical-rl] rotate-180">
+                          {m.short}
+                        </span>
+                      </div>
+                    </th>
+                  ))
                 ) : (
                   <>
                     <th className="py-1 px-2 text-center border-r border-slate-300">Jenis</th>
@@ -377,8 +372,6 @@ export default function LegerPage() {
                     <th className="py-1 px-2 border-r border-slate-300">Memo untuk Orang Tua</th>
                   </>
                 )}
-
-                <th className="sticky right-0 bg-slate-200/80 z-30 text-center">Cetak</th>
               </tr>
             </thead>
 
@@ -398,15 +391,15 @@ export default function LegerPage() {
                   return (
                     <tr
                       key={student.nis}
-                      className="hover:bg-brand-50/40 transition group text-slate-700"
+                      className="bg-white even:bg-slate-100 hover:bg-brand-50 transition-colors text-slate-700"
                     >
-                      <td className="py-1.5 px-2 text-center border-r border-slate-200 font-mono font-semibold sticky left-0 bg-white group-hover:bg-brand-50/70 z-10">
+                      <td className="py-1.5 px-2 text-center border-r border-slate-200 font-mono font-semibold sticky left-0 bg-inherit z-10">
                         {student.no}
                       </td>
-                      <td className="py-1.5 px-2 border-r border-slate-200 font-mono text-slate-500 sticky left-10 bg-white group-hover:bg-brand-50/70 z-10 text-[11px]">
+                      <td className="py-1.5 px-2 border-r border-slate-200 font-mono text-slate-500 sticky left-10 bg-inherit z-10 text-[11px]">
                         {student.nis}
                       </td>
-                      <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-slate-800 sticky left-30 bg-white group-hover:bg-brand-50/70 z-10 truncate max-w-[220px]">
+                      <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-slate-800 sticky left-30 bg-inherit z-10 truncate max-w-[220px]">
                         <div className="flex items-center gap-1.5">
                           {isTop3 && (
                             <i className={`fa-solid fa-trophy text-xs ${
@@ -445,13 +438,13 @@ export default function LegerPage() {
                                   value={val !== undefined ? val : ''}
                                   onChange={(e) => updateStudentGrade(student.nis, m.key, e.target.value)}
                                   placeholder="-"
-                                  className={`w-full py-1.5 text-center font-mono text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition ${
+                                  className={`w-full py-1.5 text-center font-mono text-xs bg-transparent focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition ${
                                     isBelowKKM 
                                       ? 'text-rose-700 font-extrabold' 
                                       : isEmpty 
                                       ? 'text-slate-300 font-medium' 
                                       : 'text-slate-800 font-semibold'
-                                  } ${isLocked ? 'cursor-not-allowed bg-transparent' : 'cursor-text'}`}
+                                  } ${isLocked ? 'cursor-not-allowed' : 'cursor-text'}`}
                                 />
                               </td>
                             );
@@ -577,7 +570,7 @@ export default function LegerPage() {
                         </>
                       )}
 
-                      <td className="py-1.5 px-2 text-center sticky right-0 bg-white group-hover:bg-brand-50/70 z-10">
+                      <td className="py-1.5 px-2 text-center sticky right-0 bg-inherit z-10">
                         <button
                           type="button"
                           onClick={() => openRaportModal(student)}
@@ -594,12 +587,13 @@ export default function LegerPage() {
               )}
             </tbody>
           </table>
+          </ScrollableTableCard>
         </div>
       </div>
 
       {/* Grid Bawah: Peringkat 10 Besar & Petunjuk */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
+        <div className="min-w-0 bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <i className="fa-solid fa-ranking-star text-amber-500 text-sm"></i>
@@ -608,7 +602,7 @@ export default function LegerPage() {
             <span className="text-[10px] text-slate-400 font-mono">Berdasarkan Total Nilai STS</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <ScrollableTableCard label="tabel Peringkat 10 Besar">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[10.5px] font-bold text-slate-600">
@@ -622,7 +616,7 @@ export default function LegerPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {top10Students.map((s, idx) => (
-                  <tr key={s.nis} className="hover:bg-slate-50 transition">
+                  <tr key={s.nis} className="bg-white even:bg-slate-100 hover:bg-brand-50 transition-colors">
                     <td className="py-1.5 px-2 text-center font-bold">
                       <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] ${
                         idx === 0 ? 'bg-amber-500 text-white' :
@@ -659,7 +653,7 @@ export default function LegerPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollableTableCard>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
