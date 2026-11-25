@@ -11,7 +11,7 @@ export const SCHOOL_INFO = {
   alamatKop: "Blokagung Tegalsari Banyuwangi",
   alamatLengkap: "Jl. PP Darussalam Blokagung Karangdoro Tegalsari Banyuwangi Jawa Timur | Telp : 0333-845973 | web: blokagung.net | e-mail : mts.alamiriyyah@ymail.com",
   judulRaport: "LAPORAN HASIL (STS) SUMATIF TENGAH SEMESTER GANJIL",
-  tahunAjaran: "2025/2026",
+  tahunAjaran: "2026/2027",
   semester: "GANJIL",
   ujian: "STS",
   tglRaport: "09 Oktober 2025",
@@ -252,9 +252,14 @@ export function generateInitialLegerData(classId = '8A') {
     return hitungRankingLeger(list);
   }
 
-  // Default 8A
-  const students = INITIAL_STUDENTS_8A.map((s, idx) => {
-    const isFullyFilled = idx < 25;
+  const roster = classId === '8A' ? INITIAL_STUDENTS_8A : Array.from({ length: 24 }, (_, index) => ({
+    no: index + 1,
+    nis: `DEMO-${classId}-${String(index + 1).padStart(2, '0')}`,
+    nama: `Siswa Demo ${classId}-${String(index + 1).padStart(2, '0')}`,
+    lp: classId.charCodeAt(1) % 2 === 0 ? 'P' : 'L',
+  }));
+  const students = roster.map((s, idx) => {
+    const isFullyFilled = idx < roster.length - 4;
     const baseScore = 72 + ((idx * 7) % 22);
 
     const grades = {};

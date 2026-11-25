@@ -65,6 +65,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
       
       {/* KOP SURAT RESMI LEMBAGA */}
       <div className="text-center relative pb-2 mb-2">
+        {schoolSettings.logoKop && <img src={schoolSettings.logoKop} alt="Logo madrasah" className="mx-auto mb-2 h-14 w-14 object-contain" />}
         <h3 className="text-[13px] font-bold tracking-wide uppercase">
           {schoolSettings.yayasan}
         </h3>

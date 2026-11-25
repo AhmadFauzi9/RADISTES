@@ -12,6 +12,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
       </head>
       <body>
         <AppProvider>

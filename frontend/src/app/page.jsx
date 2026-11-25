@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import SummaryCard from '@/components/common/SummaryCard';
+import { gradeSummary, teachingAssignments } from '@/lib/teaching';
 
 export default function DashboardPage() {
   const { 
@@ -16,6 +17,10 @@ export default function DashboardPage() {
     activeClassInfo, 
     allClasses, 
     currentLeger, 
+    allMapel,
+    legerByClass,
+    teachersList,
+    submissionRecords,
     classStatus,
     openRaportModal
   } = useApp();
@@ -42,6 +47,15 @@ export default function DashboardPage() {
   const topStudents = [...currentLeger].sort((a, b) => (b.totalNilai || 0) - (a.totalNilai || 0)).slice(0, 5);
 
   const isClassLocked = classStatus[selectedClassId]?.isLocked;
+  const roster = Object.values(legerByClass).flat();
+  const assignedTeachers = teachersList.filter(teacher => !teacher.isAdmin && teacher.assignments?.length);
+  const sentTeachers = assignedTeachers.filter(teacher => teacher.assignments.every(item =>
+    submissionRecords[[teacher.username, item.classId, item.subjectKey].join(':')]?.sent
+  )).length;
+  const classGenderCount = gender => allClasses.filter(item => {
+    const students = legerByClass[item.id] || [];
+    return students.length > 0 && students.every(student => student.lp === gender);
+  }).length;
 
   return (
     <div className="space-y-4">
@@ -97,8 +111,42 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Summary Cards Grid (5 Cards ExamLAN Pro style) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {isSuperAdmin && <section aria-label="Ringkasan Madrasah" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard title="Total Siswa" value={roster.length} icon="fa-users"
+          subtitle={`${roster.filter(student => student.lp === 'L').length} putra · ${roster.filter(student => student.lp === 'P').length} putri`} />
+        <SummaryCard title="Total Rombel" value={allClasses.length} icon="fa-layer-group" iconColor="text-indigo-600"
+          subtitle={`${classGenderCount('L')} putra · ${classGenderCount('P')} putri teridentifikasi`} />
+        <Link href="/setor-nilai" className="rounded-2xl focus-visible:outline focus-visible:outline-brand-600">
+          <SummaryCard title="Setoran Nilai" value={`${sentTeachers} / ${assignedTeachers.length}`} icon="fa-paper-plane" iconColor="text-emerald-600"
+            subtitle={`${assignedTeachers.length - sentTeachers} guru belum selesai`} />
+        </Link>
+        <Link href="/pengaturan" className="rounded-2xl focus-visible:outline focus-visible:outline-brand-600">
+          <SummaryCard title="Tahun Aktif" value={schoolSettings.tahunAjaran} icon="fa-calendar-days" iconColor="text-amber-600"
+            subtitle="Buka pengaturan raport" />
+        </Link>
+      </section>}
+      {!isSuperAdmin && <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-slate-800">Kelas yang Diampu</h2>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+            <i className="fa-solid fa-clock mr-1" aria-hidden="true" />
+            Tenggat setor · {schoolSettings.deadlineSetor || 'Belum ditetapkan'}
+          </span>
+        </div>
+        {!teachingAssignments(currentUser, allMapel).length && <p className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Belum ada penugasan mengajar.</p>}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {teachingAssignments(currentUser, allMapel).map(({ classId, subjectKey }) => {
+          const students = legerByClass[classId] || [];
+          const summary = gradeSummary(students, [subjectKey]);
+          return <SummaryCard key={classId + ':' + subjectKey}
+            title={`${classId} · ${allMapel.find(item => item.key === subjectKey)?.name}`}
+            value={`${summary.completion}%`} icon="fa-chalkboard-user"
+            badge={summary.ready ? 'Siap dikirim' : 'Belum lengkap'}
+            subtitle={`${students.length} siswa · Rata-rata ${summary.average} · Rentang ${summary.range}`} />;
+        })}
+        </div>
+      </section>}
+      {isWaliKelas && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* 1. Total Siswa */}
         <SummaryCard
           title="Total Siswa"
@@ -126,7 +174,6 @@ export default function DashboardPage() {
           subtitle="Skala nilai 0 - 100"
           icon="fa-chart-simple"
           iconColor="text-indigo-600"
-          trend="+2.4"
         />
 
         {/* 4. Tertinggi / Terendah */}
@@ -141,16 +188,16 @@ export default function DashboardPage() {
         {/* 5. Status Raport */}
         <SummaryCard
           title="Kesiapan Raport"
-          value={isClassLocked ? "Terkunci" : "Siap Cetak"}
-          subtitle={isClassLocked ? "Nilai fix siap print" : "Siap unduh preview PDF"}
+          value={isClassLocked ? "Terkunci" : totalSiswa > 0 && siswaLengkap === totalSiswa ? "Siap Cetak" : "Belum Lengkap"}
+          subtitle={isClassLocked ? "Leger sudah dikunci" : "Berdasarkan kelengkapan nilai"}
           icon="fa-file-pdf"
           iconColor={isClassLocked ? "text-indigo-600" : "text-emerald-600"}
           badge={isClassLocked ? "Locked" : "Editable"}
         />
-      </div>
+      </div>}
 
       {/* Main Grid: Alur Kerja & Peringkat 5 Besar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className={isWaliKelas ? 'grid grid-cols-1 gap-4 lg:grid-cols-3' : 'space-y-4'}>
         
         {/* Kolom Kiri & Tengah: Penjelasan Alur Aplikasi REDIS */}
         <div className="lg:col-span-2 space-y-4">
@@ -210,53 +257,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card Status Seluruh Kelas MTs Al Amiriyyah */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                  <i className="fa-solid fa-layer-group text-brand-600"></i>
-                  Status Pengisian 49 Kelas (Tingkat 7, 8, dan 9)
-                </h3>
-                <p className="text-[11px] text-slate-400">Pilih salah satu kelas untuk beralih dan melihat leger nilainya</p>
-              </div>
-              <span className="text-[11px] font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-full border border-brand-200">
-                Total 49 Kelas
-              </span>
-            </div>
-
-            {/* Tingkat 8 List Sample */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tingkat Kelas 8 (Sampel Aktif):</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                {allClasses.filter(c => c.tingkat === '8').slice(0, 12).map(c => {
-                  const isCurrent = c.id === selectedClassId;
-                  return (
-                    <Link
-                      key={c.id}
-                      href="/leger"
-                      className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
-                        isCurrent
-                          ? 'bg-brand-600 text-white border-brand-600 shadow-xs'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <div className="font-black text-sm">{c.nama}</div>
-                      <div className={`text-[9px] truncate ${isCurrent ? 'text-brand-100' : 'text-slate-500'}`}>
-                        {c.wali}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
 
         </div>
 
-        {/* Kolom Kanan: Top 5 Siswa Kelas 8A */}
-        <div className="space-y-4">
+        {isWaliKelas && <div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -303,17 +307,18 @@ export default function DashboardPage() {
 
             {/* Quick Preview Raport Juara 1 */}
             {topStudents.length > 0 && (
-              <button
+              <button data-module-action
                 type="button"
                 onClick={() => openRaportModal(topStudents[0])}
                 className="w-full mt-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
+              title="Pratinjau Raport Juara 1"
+              aria-label="Pratinjau Raport Juara 1"
               >
-                <i className="fa-solid fa-file-pdf text-brand-400"></i>
-                <span>Preview Raport Juara 1</span>
+                <i aria-hidden="true" className="fa-solid fa-file-pdf text-brand-400"></i>
               </button>
             )}
           </div>
-        </div>
+        </div>}
 
       </div>
 

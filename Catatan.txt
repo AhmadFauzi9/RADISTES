@@ -1,10 +1,31 @@
 HALAMAN ADMIN:
-1.  tambahkan halaman guru mapel yang berisi :
-    a. menu untuk input manual data guru mapel beserta kode guru, nama guru, kelas yang di ampu beserta mapelnya
+1.  MENU dashboard
+    A.  Isi tampilan dashboard admin :
+        a). Daftar kelas yang di ampu beserta informasi:
+            1. Jumlah total siswa
+            2. jumlah siswa putra
+            3. jumlah siswa putri
+            4. jumlah rombel & jumlah rombel putra & jumlah rombel putri
+            5. jumlah guru mapel yang sudah dan yang belum mengirim nilai ke wali kelas
+            6. tahun aktif (ketika di tekan menuju pengaturan tahun aktif)
+        b). Alur Kerja Aplikasi Raport Tengah Semester (RADISTES) (seperti tampilan sekarang namun tidak ada peringkat)
+2.  MENU Leger Nilai STS
+    A.  Menampilkan tabel leger seluruh kelas (tab per kelas per tingkatan lengkap dengan search dan tombol toolbar):
+    B.  Menampilkan tabel raport seluruh kelas (diberikan filter kelas bagian lengkap dengan search dan tombol toolbar)
+3.  MENU Setor Nilai
+    A.  Menampilkan tabel data guru yang sudah input/import nilai dan status apakah sudah mengirim atau belum (diberikan filter kelas bagian lengkap dengan search dan tombol toolbar)
+4.  MENU walikelas
+    A.  Menampilkan tabel kelas dan wali kelas disertai tombol input file excel data wali kelas
+5. MENU Pengaturan Raport
+    A. Menampilkan pengaturan raport yang sekarang di tambah form logo untuk kop
+6. MENU Guru Mapel - tambahkan menu guru mapel dibawah menu wali kelas yang berisi :
+    A.  Menampilkan rabel guru mapel beserta kelas dan mapel yang diampu
+        1). tambahkan form input manual dan import excel data guru mapel dengan isian: kode guru, nama guru, kelas yang di ampu beserta mapelnya
+        2). (diberikan filter lengkap dengan search dan tombol toolbar)
 
 ## --------------------------------------------------------###
 
-HALAMAN GURU MAPEL
+HALAMAN GURU MAPEL:
 1.  MENU dashboard
     A.  Isi tampilan dashboard guru mapel :
         a). deadline pengiriman nilai ke walikelas
@@ -18,6 +39,7 @@ HALAMAN GURU MAPEL
 2.  MENU setor nilai (yang perlu di ubah)
     A.  Tampilan leger tidak boleh di atur halaman data siswa, tapi termasuk bagian independen dari halaman setor nila :
         a.  Form "Kelas yang Diampu"
+
         b.  Form "Mata Pelajaran yang Diampu"
         c.  bawahnya tetap yang sekarang tombol "Template DKN" dan "Import Nilai DKN"
         d.  bawahnya tetap yang sekarang "Isi Nilai Cepat:" dan tombol "Kirim Nilai", ketika tekan kirim nilai, maka:
@@ -61,11 +83,16 @@ HALAMAN WALI KELAS yang juga termasuk guru mapel
 2.  MENU Leger Nilai STS
     A.  hapus tombol "Import DKN Excel"
 3.  MENU Cetak Raport
-    A.  tampilan header seperti judul dan tab Mode Cetak tetap seperti sekarang.
+    A.  tampilan header seperti judul tetap seperti sekarang lalu tab Mode Cetak di hapus.
+    B.  Tambahkan Filter dan search dan sebelah kanan tombol toolbar download semua raport (pdf), download leger excel, download leger pdf,
     B.  Ubah tampilan raport menjadi tabel data siswa dalam kelas tersebut, dengan isi:
         a). informasi wali kelas, kelas, tahun Pelajaran
         b). NO | NO INDUK | NAMA LENGKAP | PERINGKAT | AKSI |
-            - isi tombol aksi : 
+            - isi tombol aksi:
+                1). Icon View (ketika di tekan baru menampilkan raport siswa tersebut)
+                2). Icon Edit (Edit Data Siswa)
+                3). Icon Download (raport format pdf)
+                4). Icon Deleted
 4.  MENU setor nilai (yang perlu di ubah)
     A.  Tampilan leger tidak boleh di atur halaman data siswa, tapi termasuk bagian independen dari halaman setor nila :
         a.  Form "Kelas yang Diampu"
@@ -86,5 +113,8 @@ HALAMAN WALI KELAS yang juga termasuk guru mapel
         a.  Judul/Header = DAFTAR NILAI STS GANJIL MTs AL AMRIYYAH BLOKAGUNG TAHUN PELAJARAN 2026/2027
         b.  tepat di atas tabel = KELAS : Misal 7K | MAPEL : Misal : Informatika | KKM : 70
         c.  kolom header = NO | NO INDUK | NAMA LENGKAP | UH 1 | UH 2 | NILAI STS | NILAI RATA-RATA | KETERCAPAIAN |
+5.  MENU Siswa Kelas dihapus
+6.  MEMU Pengaturan raport hanya untuk admin.
 
 ## --------------------------------------------------------###
+

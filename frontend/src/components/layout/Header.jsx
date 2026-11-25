@@ -12,10 +12,6 @@ export default function Header() {
     isSuperAdmin,
     isWaliKelas,
     isGuruMapelOnly,
-    selectedClassId, 
-    setSelectedClassId, 
-    allClasses, 
-    activeClassInfo,
     pendingSubmissions 
   } = useApp();
 
@@ -45,52 +41,9 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Right Section: Class Selector, Notifications, User Profile & Logout */}
+        {/* Notifikasi, profil, dan keluar */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
           
-          {/* Quick Class Switcher Dropdown (Hanya jika Admin atau Wali Kelas) */}
-          {!isGuruMapelOnly && currentUser && (
-            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-2xs">
-              <i className="fa-solid fa-chalkboard-user text-xs text-brand-400"></i>
-              <span className="text-[11px] text-slate-400 font-semibold hidden md:inline">Kelas:</span>
-              
-              {isWaliKelas ? (
-                // Jika Wali Kelas: Terkunci otomatis ke kelas yang diampunya saja
-                <span className="text-white text-xs font-bold pl-1">
-                  Kelas {currentUser.kelasWali} <span className="text-[10px] text-amber-400 font-normal">(Kelas Anda)</span>
-                </span>
-              ) : (
-                // Jika Admin: Bebas pilih 49 kelas
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer pr-1"
-                >
-                  <optgroup label="Kelas 7">
-                    {allClasses.filter(c => c.tingkat === '7').map(c => (
-                      <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                        Kelas {c.nama} ({c.wali})
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Kelas 8">
-                    {allClasses.filter(c => c.tingkat === '8').map(c => (
-                      <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                        Kelas {c.nama} ({c.wali})
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Kelas 9">
-                    {allClasses.filter(c => c.tingkat === '9').map(c => (
-                      <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                        Kelas {c.nama} ({c.wali})
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-              )}
-            </div>
-          )}
 
           {/* Notifikasi Setoran Guru Mapel */}
           <div className="relative">
@@ -99,8 +52,9 @@ export default function Header() {
               onClick={() => setShowNotifDropdown(!showNotifDropdown)}
               className="relative p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none cursor-pointer"
               title="Notifikasi Setoran Nilai Masuk"
+            aria-label="Notifikasi Setoran Nilai Masuk"
             >
-              <i className="fa-solid fa-bell text-sm sm:text-base"></i>
+              <i aria-hidden="true" className="fa-solid fa-bell text-sm sm:text-base"></i>
               {pendingSubmissions.length > 0 && (
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900 animate-pulse"></span>
               )}
@@ -179,9 +133,9 @@ export default function Header() {
                 onClick={logout}
                 className="p-1.5 px-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-600 text-rose-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
                 title="Keluar dari akun (Logout)"
+              aria-label="Keluar dari akun (Logout)"
               >
-                <i className="fa-solid fa-right-from-bracket text-xs text-rose-400 group-hover:text-white transition-colors"></i>
-                <span className="hidden md:inline">Logout</span>
+                <i aria-hidden="true" className="fa-solid fa-right-from-bracket text-xs text-rose-400 group-hover:text-white transition-colors"></i>
               </button>
             </div>
           )}

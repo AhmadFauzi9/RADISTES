@@ -1,10 +1,11 @@
 'use client';
 
+import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 
 export default function PengaturanPage() {
-  const { schoolSettings, setSchoolSettings, showToast } = useApp();
+  const { schoolSettings, setSchoolSettings, showToast, isSuperAdmin } = useApp();
 
   const [formData, setFormData] = useState({ ...schoolSettings });
 
@@ -22,28 +23,18 @@ export default function PengaturanPage() {
     showToast('Pengaturan lembaga & format raport STS berhasil diperbarui!', 'success');
   };
 
+  if (!isSuperAdmin) return <p className="text-sm text-slate-600">Pengaturan raport hanya tersedia untuk admin.</p>;
+
   return (
     <div className="space-y-4">
       
       {/* Header Info */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="p-1 px-2 rounded-lg bg-amber-100 text-amber-800 font-extrabold text-[10px] uppercase tracking-wider">
-              Konfigurasi Raport
-            </span>
-            <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight">
-              PENGATURAN IDENTITAS LEMBAGA & RAPORT STS
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Informasi di halaman ini akan langsung tercetak pada Kop Surat, Titimangsa, dan Tanda Tangan seluruh Raport STS siswa.
-          </p>
-        </div>
+      <div className="module-panel space-y-3">
+        <ModuleHeading label="Konfigurasi Raport" title="Pengaturan Raport STS" description="Kelola kop surat, tahun pelajaran, dan tanda tangan raport." />
       </div>
 
       {/* Form Pengaturan */}
-      <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-5">
+      <form onSubmit={handleSave} className="module-panel space-y-5">
         
         {/* Identitas Kop Surat */}
         <div>
@@ -51,6 +42,24 @@ export default function PengaturanPage() {
             <i className="fa-solid fa-school text-brand-600"></i> Kop Surat Resmi Lembaga
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <label className="space-y-1 font-semibold text-slate-700">
+              <span className="block">Deadline pengiriman nilai</span>
+              <input className="module-control" type="date" name="deadlineSetor" value={formData.deadlineSetor || ''} onChange={handleChange} />
+            </label>
+            <label className="space-y-1 font-semibold text-slate-700">
+              <span className="block">Logo kop raport</span>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {
+                const file = event.target.files[0];
+                if (!file) return;
+                if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 1024 * 1024) {
+                  showToast('Gunakan logo PNG, JPEG, atau WebP maksimal 1 MB.', 'warning');
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => setFormData(previous => ({ ...previous, logoKop: reader.result }));
+                reader.readAsDataURL(file);
+              }} />
+            </label>
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Yayasan / Naungan:</label>
               <input
@@ -58,7 +67,7 @@ export default function PengaturanPage() {
                 name="yayasan"
                 value={formData.yayasan}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div>
@@ -68,7 +77,7 @@ export default function PengaturanPage() {
                 name="namaMadrasah"
                 value={formData.namaMadrasah}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div>
@@ -78,7 +87,7 @@ export default function PengaturanPage() {
                 name="nsm"
                 value={formData.nsm}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div>
@@ -88,7 +97,7 @@ export default function PengaturanPage() {
                 name="npsn"
                 value={formData.npsn}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div className="sm:col-span-2">
@@ -98,7 +107,7 @@ export default function PengaturanPage() {
                 name="alamatKop"
                 value={formData.alamatKop}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div className="sm:col-span-2">
@@ -108,7 +117,7 @@ export default function PengaturanPage() {
                 rows="2"
                 value={formData.alamatLengkap}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               ></textarea>
             </div>
           </div>
@@ -127,7 +136,7 @@ export default function PengaturanPage() {
                 name="judulRaport"
                 value={formData.judulRaport}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div>
@@ -137,7 +146,7 @@ export default function PengaturanPage() {
                 name="tahunAjaran"
                 value={formData.tahunAjaran}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               />
             </div>
             <div>
@@ -146,7 +155,7 @@ export default function PengaturanPage() {
                 name="semester"
                 value={formData.semester}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
               >
                 <option value="GANJIL">GANJIL</option>
                 <option value="GENAP">GENAP</option>
@@ -159,7 +168,7 @@ export default function PengaturanPage() {
                 name="tglRaport"
                 value={formData.tglRaport}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
                 placeholder="09 Oktober 2025"
               />
             </div>
@@ -170,7 +179,7 @@ export default function PengaturanPage() {
                 name="titimangsa"
                 value={formData.titimangsa}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
                 placeholder="Blokagung"
               />
             </div>
@@ -181,7 +190,7 @@ export default function PengaturanPage() {
                 name="kepalaMadrasah"
                 value={formData.kepalaMadrasah}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500 outline-none"
+                className="module-control w-full"
                 placeholder="AHMADI, M.Pd.I"
               />
             </div>
@@ -190,12 +199,13 @@ export default function PengaturanPage() {
 
         {/* Action Button */}
         <div className="flex justify-end pt-3 border-t border-slate-100">
-          <button
+          <button data-module-action
             type="submit"
             className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
+          title="Simpan Pengaturan Raport"
+          aria-label="Simpan Pengaturan Raport"
           >
-            <i className="fa-solid fa-floppy-disk"></i>
-            <span>Simpan Pengaturan Raport</span>
+            <i aria-hidden="true" className="fa-solid fa-floppy-disk"></i>
           </button>
         </div>
 

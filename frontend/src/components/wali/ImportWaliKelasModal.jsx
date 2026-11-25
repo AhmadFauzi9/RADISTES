@@ -1,5 +1,6 @@
 'use client';
 
+import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
@@ -101,39 +102,33 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
         
         {/* Header Modal */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-              <i className="fa-solid fa-file-import"></i>
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm sm:text-base">Import Penugasan Wali Kelas (Excel)</h3>
-              <p className="text-[11px] text-slate-500">Unggah file Excel SK pembagian tugas untuk memperbarui wali kelas di 49 kelas sekaligus</p>
-            </div>
-          </div>
-          <button
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <ModuleHeading compact label="Impor Excel" title="Impor Penugasan Wali Kelas" description="Unggah Excel pembagian tugas wali kelas." />
+          <button data-module-action
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+          title="Tutup Modal"
+          aria-label="Tutup Modal"
           >
-            <i className="fa-solid fa-xmark text-lg"></i>
+            <i aria-hidden="true" className="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
 
         {/* Upload Box */}
-        <div className="border-2 border-dashed border-slate-300 hover:border-purple-500 rounded-2xl p-5 text-center bg-slate-50/50 transition">
+        <div className="module-upload">
           <input
             type="file"
-            id="wali-file-input"
+            id="wali-file-input" aria-label="Impor Penugasan Wali Kelas"
             accept=".xlsx, .xls, .csv"
             onChange={handleFileUpload}
-            className="hidden"
+            className="sr-only"
           />
           <label htmlFor="wali-file-input" className="cursor-pointer space-y-2 block">
-            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto text-xl">
+            <div className="module-upload-icon">
               <i className="fa-solid fa-file-excel"></i>
             </div>
             <div>
@@ -150,21 +145,23 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
         {/* Template Link */}
         <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
           <span className="text-slate-500">Gunakan template resmi untuk menghindari kesalahan kolom:</span>
-          <button
+          <button data-module-action data-action-tone="success"
             type="button"
             onClick={handleDownloadTemplate}
             className="text-brand-700 font-bold hover:underline cursor-pointer text-[11px]"
+          title="Unduh Template 49 Kelas"
+          aria-label="Unduh Template 49 Kelas"
           >
-            <i className="fa-solid fa-download mr-1"></i> Unduh Template 49 Kelas (.xlsx)
+            <i aria-hidden="true" className="fa-solid fa-download"></i>
           </button>
         </div>
 
         {/* Preview Data */}
         {previewAssignments.length > 0 && (
           <div className="flex-1 overflow-hidden border border-slate-200 rounded-xl flex flex-col">
-            <div className="p-2 bg-slate-100 font-bold text-xs text-slate-700 flex justify-between items-center border-b">
+            <div className="module-table-caption flex flex-wrap items-center justify-between gap-2">
               <span>Preview Penugasan ({previewAssignments.length} Kelas)</span>
-              <span className="text-[10px] text-purple-700 font-bold">Siap Disimpan</span>
+              <span className="text-[10px] text-emerald-300 font-bold">Siap Disimpan</span>
             </div>
             <div className="overflow-y-auto max-h-48 custom-scrollbar">
               <table className="w-full text-left text-xs">
@@ -191,21 +188,24 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
 
         {/* Modal Actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button
+          <button data-module-action
             type="button"
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+          title="Batal"
+          aria-label="Batal"
           >
-            Batal
+            <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
-          <button
+          <button data-module-action data-action-tone="primary"
             type="button"
             disabled={previewAssignments.length === 0 || isProcessing}
             onClick={handleApply}
             className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5"
+          title="Terapkan Penugasan Wali Kelas"
+          aria-label="Terapkan Penugasan Wali Kelas"
           >
-            <i className="fa-solid fa-check"></i>
-            <span>Terapkan Penugasan Wali Kelas</span>
+            <i aria-hidden="true" className="fa-solid fa-check"></i>
           </button>
         </div>
 

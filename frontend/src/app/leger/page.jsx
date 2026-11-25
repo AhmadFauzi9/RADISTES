@@ -1,9 +1,13 @@
 'use client';
 
+import ModuleSearch from '@/components/common/ModuleSearch';
+import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import ImportDknModal from '@/components/import/ImportDknModal';
+
+const toolbarButton = 'module-action';
 
 export default function LegerPage() {
   const { 
@@ -28,6 +32,8 @@ export default function LegerPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
   const [activeTab, setActiveTab] = useState('nilai');
   const [isDknModalOpen, setIsDknModalOpen] = useState(false);
 
@@ -84,7 +90,7 @@ export default function LegerPage() {
     if (filterStatus === 'belowKKM') {
       return allMapel.some(m => {
         const val = grades[m.key];
-        return val !== '' && val !== null && val !== undefined && Number(val) < 70;
+        return val !== '' && val !== null && val !== undefined && Number(val) < m.kkm;
       });
     }
 
@@ -120,12 +126,13 @@ export default function LegerPage() {
   const handleExportExcel = () => {
     showToast(`Mengekspor Leger Kelas ${effectiveClassId} ke file Excel (.xlsx)...`, 'info');
     setTimeout(() => {
-      const headers = ['No', 'NIS', 'Nama Siswa', 'L/P', ...allMapel.map(m => m.short), 'Jumlah Nilai', 'Rata-rata', 'Rank', 'Ekskul', 'Kelakuan', 'Kerajinan', 'Kerapian', 'Sakit', 'Izin', 'Alpa', 'Catatan'];
+      const headers = ['No', 'NIS', 'Nama Siswa', 'L/P', 'Kelas', ...allMapel.map(m => m.short), 'Jumlah Nilai', 'Rata-rata', 'Rank', 'Ekskul', 'Kelakuan', 'Kerajinan', 'Kerapian', 'Sakit', 'Izin', 'Alpa', 'Catatan'];
       const rows = currentLeger.map(s => [
         s.no,
         s.nis,
         `"${s.nama}"`,
         s.lp,
+        s.kelas || effectiveClassId,
         ...allMapel.map(m => s.grades[m.key] || 0),
         s.totalNilai,
         s.rataRata,
@@ -157,57 +164,12 @@ export default function LegerPage() {
     <div className="space-y-4">
       
       {/* Header Info Sheet Leger */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1 px-2 rounded-lg bg-brand-100 text-brand-800 font-extrabold text-[10px] uppercase tracking-wider">
-                {isWaliKelas ? `Kelas Anda: ${effectiveClassId}` : 'Dokumen Resmi'}
-              </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight">
-                LEGER KUMPULAN NILAI STS - KELAS {effectiveClassId}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Wali Kelas: <strong>{activeClassInfo?.wali}</strong> • {isWaliKelas ? 'Hanya menampilkan data kelas yang Anda ampu.' : 'Akses Administrator.'}
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Tombol Import DKN langsung ke Leger */}
-            <button
-              type="button"
-              onClick={() => setIsDknModalOpen(true)}
-              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <i className="fa-solid fa-file-excel text-emerald-600"></i>
-              <span>Import DKN Excel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleLockClass(effectiveClassId)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                isLocked 
-                  ? 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-              }`}
-              title={isLocked ? "Buka kunci untuk mengedit nilai" : "Kunci jika nilai sudah penuh dan fix"}
-            >
-              <i className={`fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}`}></i>
-              <span>{isLocked ? 'Leger Terkunci (Fix)' : 'Kunci Nilai Fix'}</span>
-            </button>
-
-            <Link
-              href="/cetak-raport"
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-            >
-              <i className="fa-solid fa-print"></i>
-              <span>Cetak Raport PDF ({completeCount}/{currentLeger.length})</span>
-            </Link>
-          </div>
-        </div>
+      <div className="module-panel space-y-3">
+        <ModuleHeading
+          label={isWaliKelas ? `Kelas Anda: ${effectiveClassId}` : 'Dokumen Resmi'}
+          title={`Leger Kumpulan Nilai STS - Kelas ${effectiveClassId}`}
+          description={<>Wali Kelas: <strong>{activeClassInfo?.wali}</strong> · {isWaliKelas ? 'Kelas yang Anda ampu' : 'Akses Administrator'}</>}
+        />
 
         {/* Metadata Header Kelas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-xl text-xs">
@@ -234,22 +196,38 @@ export default function LegerPage() {
 
       {/* Toolbar Filter & Quick Action */}
       <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative min-w-[200px] max-w-xs flex-1">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari Nama / NIS siswa..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-xs outline-none"
-            />
-          </div>
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          {isSuperAdmin && <>
+            <select aria-label="Kelas" value={levelFilter} onChange={event => {
+              const level = event.target.value;
+              setLevelFilter(level);
+              setSectionFilter('');
+              const firstClass = allClasses.find(item => item.tingkat === level);
+              if (firstClass) setSelectedClassId(firstClass.id);
+            }} className="module-control">
+              <option value="" disabled>Kelas</option>
+              {['7', '8', '9'].map(level => <option key={level} value={level}>{level}</option>)}
+            </select>
+            <select aria-label="Bagian" value={sectionFilter} onChange={event => {
+              const classId = event.target.value;
+              setLevelFilter(classId.slice(0, 1));
+              setSectionFilter(classId);
+              setSelectedClassId(classId);
+            }} className="module-control">
+              <option value="" disabled>Bagian</option>
+              {allClasses.filter(item => item.tingkat === (levelFilter || selectedClassId.slice(0, 1))).map(item => (
+                <option key={item.id} value={item.id}>{item.id.slice(1)}</option>
+              ))}
+            </select>
+          </>}
+          <ModuleSearch className="order-4" aria-label="Cari siswa" placeholder="Cari nama atau NIS siswa"
+            value={searchQuery} onChange={event => setSearchQuery(event.target.value)} />
 
           <select
+            aria-label="Filter kelengkapan nilai"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none bg-white cursor-pointer"
+            className="module-control"
           >
             <option value="all">Semua Siswa ({currentLeger.length})</option>
             <option value="complete">Nilai Lengkap ({completeCount})</option>
@@ -257,57 +235,37 @@ export default function LegerPage() {
             <option value="belowKKM">Ada Nilai &lt; 70 (Remidi)</option>
           </select>
 
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
-            <button
-              type="button"
-              onClick={() => setActiveTab('nilai')}
-              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                activeTab === 'nilai' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <i className="fa-solid fa-graduation-cap mr-1"></i> Nilai 17 Mapel
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('pendukung')}
-              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                activeTab === 'pendukung' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <i className="fa-solid fa-heart mr-1"></i> Ekskul, Akhlak & Absensi
-            </button>
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {!isAllComplete && (
-            <button
-              type="button"
-              onClick={handleSimulateFillRemaining}
-              className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-              title="Isi otomatis nilai yang masih kosong untuk mencoba cetak raport full"
-            >
-              <i className="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
-              <span>Simulasi Setor Lengkap</span>
+        <div aria-label="Aksi leger" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
+          {!isWaliKelas && (
+            <button type="button" onClick={() => setIsDknModalOpen(true)} title="Impor DKN Excel" aria-label="Impor DKN Excel"
+              className={toolbarButton + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}>
+              <i aria-hidden="true" className="fa-solid fa-file-import" />
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <i className="fa-solid fa-file-excel text-emerald-600"></i>
-            <span>Export Excel</span>
+          <button type="button" onClick={() => toggleLockClass(effectiveClassId)}
+            title={isLocked ? 'Buka kunci leger' : 'Kunci leger'} aria-label={isLocked ? 'Buka kunci leger' : 'Kunci leger'}
+            className={toolbarButton + (isLocked ? ' border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : ' border-slate-200 bg-white text-slate-600 hover:bg-slate-100')}>
+            <i aria-hidden="true" className={`fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}`} />
           </button>
-
-          <button
-            type="button"
-            onClick={handleSaveLeger}
-            className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <i className="fa-solid fa-floppy-disk"></i>
-            <span>Simpan Leger</span>
+          {!isAllComplete && (
+            <button type="button" onClick={handleSimulateFillRemaining} title="Simulasi isi nilai kosong" aria-label="Simulasi isi nilai kosong"
+              className={toolbarButton + ' border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'}>
+              <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
+            </button>
+          )}
+          <button type="button" onClick={handleExportExcel} title="Ekspor leger Excel" aria-label="Ekspor leger Excel"
+            className={toolbarButton + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}>
+            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+          </button>
+          <Link href="/cetak-raport" title={`Cetak raport PDF (${completeCount}/${currentLeger.length} lengkap)`} aria-label="Cetak raport PDF"
+            className={toolbarButton + ' border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100'}>
+            <i aria-hidden="true" className="fa-solid fa-print" />
+          </Link>
+          <button type="button" onClick={handleSaveLeger} title="Simpan leger" aria-label="Simpan leger"
+            className={toolbarButton + ' border-brand-600 bg-brand-600 text-white hover:bg-brand-700'}>
+            <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
           </button>
         </div>
       </div>
@@ -329,6 +287,32 @@ export default function LegerPage() {
           </span>
         </div>
 
+        <div className="border-b border-slate-200 bg-white px-3 py-2">
+          <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('nilai')}
+              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                activeTab === 'nilai' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            title="Nilai Mata Pelajaran"
+            aria-label="Nilai Mata Pelajaran"
+            >
+              <i aria-hidden="true" className="fa-solid fa-graduation-cap mr-1"></i> Nilai 17 Mapel
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pendukung')}
+              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                activeTab === 'pendukung' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            title="Ekskul, Akhlak & Absensi"
+            aria-label="Ekskul, Akhlak & Absensi"
+            >
+              <i aria-hidden="true" className="fa-solid fa-heart mr-1"></i> Ekskul, Akhlak & Absensi
+            </button>
+          </div>
+        </div>
         <div className="overflow-x-auto custom-scrollbar max-h-[620px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-20 shadow-xs">
@@ -337,6 +321,7 @@ export default function LegerPage() {
                 <th className="py-2 px-2 border-r border-slate-200 w-20 sticky left-10 bg-slate-100 z-30">NIS</th>
                 <th className="py-2 px-3 border-r border-slate-200 min-w-[200px] sticky left-30 bg-slate-100 z-30">Nama Siswa</th>
                 <th className="py-2 px-1 text-center border-r border-slate-200 w-8">L/P</th>
+                <th className="py-2 px-2 text-center border-r border-slate-200 w-16 bg-brand-50/60 text-brand-900">Kelas</th>
 
                 {activeTab === 'nilai' ? (
                   <>
@@ -363,6 +348,7 @@ export default function LegerPage() {
                 <th className="border-r border-slate-300 sticky left-0 bg-slate-200/80 z-30"></th>
                 <th className="border-r border-slate-300 sticky left-10 bg-slate-200/80 z-30"></th>
                 <th className="border-r border-slate-300 sticky left-30 bg-slate-200/80 z-30"></th>
+                <th className="border-r border-slate-300"></th>
                 <th className="border-r border-slate-300"></th>
 
                 {activeTab === 'nilai' ? (
@@ -398,7 +384,7 @@ export default function LegerPage() {
             <tbody className="divide-y divide-slate-200 font-sans">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="25" className="py-8 text-center text-slate-400">
+                  <td colSpan="26" className="py-8 text-center text-slate-400">
                     <i className="fa-solid fa-inbox text-2xl mb-1 block"></i>
                     Tidak ada siswa yang cocok dengan filter atau pencarian.
                   </td>
@@ -432,12 +418,15 @@ export default function LegerPage() {
                       <td className="py-1.5 px-1 text-center border-r border-slate-200 text-slate-500 font-mono text-[11px]">
                         {student.lp}
                       </td>
+                      <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-brand-700 bg-brand-50/40 text-[11px]">
+                        {student.kelas || effectiveClassId}
+                      </td>
 
                       {activeTab === 'nilai' ? (
                         <>
                           {allMapel.map((m) => {
                             const val = grades[m.key];
-                            const isBelowKKM = val !== '' && val !== null && val !== undefined && Number(val) < 70;
+                            const isBelowKKM = val !== '' && val !== null && val !== undefined && Number(val) < m.kkm;
                             const isEmpty = val === '' || val === null || val === undefined;
 
                             return (
@@ -593,9 +582,9 @@ export default function LegerPage() {
                           onClick={() => openRaportModal(student)}
                           className="p-1.5 px-2.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs flex items-center justify-center gap-1 mx-auto"
                           title="Lihat Template Raport Siap Print Siswa Ini"
+                        aria-label="Lihat Template Raport Siap Print Siswa Ini"
                         >
-                          <i className="fa-solid fa-file-pdf"></i>
-                          <span className="hidden sm:inline">Raport</span>
+                          <i aria-hidden="true" className="fa-solid fa-file-pdf"></i>
                         </button>
                       </td>
                     </tr>
@@ -624,6 +613,7 @@ export default function LegerPage() {
                 <tr className="border-b border-slate-200 bg-slate-50 text-[10.5px] font-bold text-slate-600">
                   <th className="py-1.5 px-2 text-center w-8">NO</th>
                   <th className="py-1.5 px-3">NAMA SISWA</th>
+                  <th className="py-1.5 px-2 text-center w-14">KELAS</th>
                   <th className="py-1.5 px-2 text-center w-16">TOTAL</th>
                   <th className="py-1.5 px-2 text-center w-16">RERATA</th>
                   <th className="py-1.5 px-2 text-center w-16">AKSI</th>
@@ -644,6 +634,9 @@ export default function LegerPage() {
                     <td className="py-1.5 px-3 font-semibold text-slate-800 truncate max-w-[200px]">
                       {s.nama}
                     </td>
+                    <td className="py-1.5 px-2 text-center font-bold text-brand-700 text-[11px]">
+                      {s.kelas || effectiveClassId}
+                    </td>
                     <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-900">
                       {s.totalNilai}
                     </td>
@@ -656,8 +649,9 @@ export default function LegerPage() {
                         onClick={() => openRaportModal(s)}
                         className="text-brand-600 hover:text-brand-800 text-[11px] font-bold cursor-pointer"
                         title="Cetak Raport"
+                      aria-label="Cetak Raport"
                       >
-                        <i className="fa-solid fa-print"></i>
+                        <i aria-hidden="true" className="fa-solid fa-print"></i>
                       </button>
                     </td>
                   </tr>

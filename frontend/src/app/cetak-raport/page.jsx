@@ -1,240 +1,427 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import ModuleSearch from '@/components/common/ModuleSearch';
+import ModuleHeading from '@/components/common/ModuleHeading';
+import { useState } from 'react';
+import { flushSync } from 'react-dom';
+import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
 import PrintableRaport from '@/components/raport/PrintableRaport';
 
 export default function CetakRaportPage() {
-  const { 
-    currentUser,
-    isSuperAdmin,
-    isWaliKelas,
-    isGuruMapelOnly,
-    schoolSettings, 
-    selectedClassId, 
-    activeClassInfo, 
-    currentLeger, 
-    openRaportModal,
-    showToast 
-  } = useApp();
+  const { currentUser, isWaliKelas, isGuruMapelOnly, schoolSettings, selectedClassId,
+    allClasses, allMapel, legerByClass, classStatus, changeReportStudent, openRaportModal } = useApp();
+  const [classFilter, setClassFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [printJob, setPrintJob] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const classId = isWaliKelas ? currentUser.kelasWali : classFilter || selectedClassId;
+  const classInfo = allClasses.find(item => item.id === classId);
+  const students = legerByClass[classId] || [];
+  const locked = classStatus[classId]?.isLocked;
+  const filtered = students.filter(student =>
+    [student.nama, student.nis].join(' ').toLowerCase().includes(search.trim().toLowerCase())
+  );
+  const headers = ['No Induk', 'Nama Lengkap', 'Kelas', ...allMapel.map(item => item.name), 'Jumlah Nilai', 'Peringkat'];
+  const gradeRows = students.map(student => [
+    student.nis, student.nama, student.kelas || classId,
+    ...allMapel.map(item => student.grades?.[item.key] ?? ''),
+    student.totalNilai ?? '',
+    student.ranking ?? ''
+  ]);
 
-  const [selectedStudentNis, setSelectedStudentNis] = useState(currentLeger[0]?.nis || '');
-  const [printMode, setPrintMode] = useState('single');
-
-  // PROTEKSI ROLE: Jika Guru Mapel murni, tolak akses cetak raport
   if (isGuruMapelOnly) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-2xs text-center max-w-xl mx-auto space-y-4 my-8">
         <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-xs">
-          <i className="fa-solid fa-ban"></i>
+          <i className="fa-solid fa-lock"></i>
         </div>
         <div>
-          <h2 className="text-lg font-black text-slate-800">Cetak Raport Dikhususkan untuk Wali Kelas</h2>
+          <h2 className="text-lg font-black text-slate-800">Akses Khusus Wali Kelas & Admin</h2>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Akun Anda terdaftar sebagai <strong>{currentUser.nama} ({currentUser.badge})</strong>. Guru mapel tidak memiliki akses mencetak raport kelas, silakan setor nilai melalui menu Setor Nilai.
+            Cetak raport hanya tersedia untuk Wali Kelas dan Administrator.
           </p>
-        </div>
-        <div className="pt-2">
-          <Link
-            href="/setor-nilai"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition shadow-xs"
-          >
-            <i className="fa-solid fa-file-excel"></i>
-            <span>Buka Menu Setor & Import Nilai Mapel →</span>
-          </Link>
         </div>
       </div>
     );
   }
 
-  const effectiveClassId = isWaliKelas ? currentUser.kelasWali : selectedClassId;
-  const activeStudent = currentLeger.find(s => s.nis === selectedStudentNis) || currentLeger[0];
+  function print(kind, student) {
+    flushSync(() => setPrintJob({ kind, students: student ? [student] : students }));
+    try { window.print(); }
+    finally { setPrintJob(null); }
+  }
 
-  const handlePrint = () => {
-    window.print();
-  };
+  function downloadLeger() {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, ...gradeRows]), 'Leger');
+    XLSX.writeFile(workbook, `Leger-${classId}.xlsx`);
+  }
 
   return (
     <div className="space-y-4">
-      
-      {/* Header Bar Cetak Raport */}
-      <div className="no-print bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+
+      {/* Header */}
+      <div className="module-panel space-y-3">
+        <ModuleHeading
+          label="Dokumen Resmi"
+          title={`Raport STS – Kelas ${classId}`}
+          description={`Wali kelas ${classInfo?.wali || '–'} · Tahun Pelajaran ${schoolSettings.tahunAjaran}`}
+        />
+
+        {/* Metadata Info */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-xl text-xs">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1 px-2 rounded-lg bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase tracking-wider">
-                {isWaliKelas ? `Kelas ${effectiveClassId}` : 'Print & Export PDF'}
-              </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight">
-                CETAK RAPORT STS - KELAS {effectiveClassId}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Template resmi MTs Al Amiriyyah 1:1 Excel. Wali Kelas: <strong>{activeClassInfo?.wali}</strong>
-            </p>
+            <span className="text-slate-400 block text-[10px]">Kelas & Wali Kelas:</span>
+            <span className="font-bold text-slate-800">{classId} • {classInfo?.wali || '–'}</span>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/leger"
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <i className="fa-solid fa-arrow-left"></i>
-              <span>Kembali ke Leger</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
-            >
-              <i className="fa-solid fa-print"></i>
-              <span>{printMode === 'all' ? `Cetak Seluruh Siswa (${currentLeger.length} Raport)` : 'Cetak Raport Ini (PDF)'}</span>
-            </button>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Tahun Pelajaran:</span>
+            <span className="font-bold text-slate-800">{schoolSettings.tahunAjaran}</span>
           </div>
-        </div>
-
-        {/* Toolbar Pengaturan Mode Cetak */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600">Mode Cetak:</span>
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
-              <button
-                type="button"
-                onClick={() => setPrintMode('single')}
-                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  printMode === 'single' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <i className="fa-solid fa-user mr-1"></i> Per Siswa (Satuan)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPrintMode('all');
-                  showToast('Mode cetak seluruh kelas diaktifkan. Klik tombol cetak untuk mencetak semua siswa sekaligus.', 'info');
-                }}
-                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  printMode === 'all' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <i className="fa-solid fa-users mr-1"></i> Seluruh Kelas Massal ({currentLeger.length} Siswa)
-              </button>
-            </div>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Ujian / Semester:</span>
+            <span className="font-bold text-brand-700">{schoolSettings.ujian} {schoolSettings.semester}</span>
           </div>
-
-          {printMode === 'single' && (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs font-bold text-slate-600 shrink-0">Pilih Siswa:</span>
-              <select
-                value={selectedStudentNis}
-                onChange={(e) => setSelectedStudentNis(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer max-w-xs truncate"
-              >
-                {currentLeger.map(s => (
-                  <option key={s.nis} value={s.nis}>
-                    No. {s.no} - {s.nama} (NIS: {s.nis}) - Rank #{s.ranking}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <span className="text-slate-400 block text-[10px]">Tgl Pembagian Raport:</span>
+            <span className="font-bold text-slate-800">{schoolSettings.tglRaport}</span>
+          </div>
         </div>
       </div>
 
-      {/* Tampilan Dokumen Raport Siap Print */}
-      {printMode === 'single' ? (
-        <div className="space-y-4">
-          <PrintableRaport
-            student={activeStudent}
-            schoolSettings={schoolSettings}
-            classInfo={activeClassInfo}
-            totalStudents={currentLeger.length}
+      {/* Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3 no-print">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <select
+            disabled={isWaliKelas}
+            aria-label="Kelas"
+            className="module-control"
+            value={levelFilter}
+            onChange={event => {
+              const level = event.target.value;
+              setLevelFilter(level);
+              setSectionFilter('');
+              const firstClass = allClasses.find(item => item.tingkat === level);
+              if (firstClass) {
+                setClassFilter(firstClass.id);
+              }
+              setEditing(null);
+              setDeleting(null);
+            }}
+          >
+            <option value="" disabled>Kelas</option>
+            {['7', '8', '9']
+              .filter(level => !isWaliKelas || level === classId.slice(0, 1))
+              .map(level => <option key={level} value={level}>{level}</option>)}
+          </select>
+          <select
+            disabled={isWaliKelas}
+            aria-label="Bagian"
+            className="module-control"
+            value={sectionFilter}
+            onChange={event => {
+              const id = event.target.value;
+              setLevelFilter(id.slice(0, 1));
+              setSectionFilter(id);
+              setClassFilter(id);
+              setEditing(null);
+              setDeleting(null);
+            }}
+          >
+            <option value="" disabled>Bagian</option>
+            {allClasses
+              .filter(item => (!isWaliKelas || item.id === classId) && item.tingkat === (levelFilter || classId.slice(0, 1)))
+              .map(item => (
+                <option key={item.id} value={item.id}>{item.id.slice(1)}</option>
+              ))}
+          </select>
+          <ModuleSearch
+            aria-label="Cari siswa"
+            placeholder="Cari nama atau nomor induk"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
           />
         </div>
-      ) : (
-        <div className="space-y-8">
-          <div className="no-print p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <i className="fa-solid fa-triangle-exclamation text-amber-600"></i>
-              <span>
-                Menampilkan <strong>{currentLeger.length} Raport</strong> berurutan. Saat dicetak atau disimpan ke PDF, setiap siswa otomatis berada di halaman tersendiri (Page-Break A4).
+
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
+          <button
+            type="button"
+            disabled={!students.length}
+            onClick={() => print('raport')}
+            title="Cetak Semua Raport (PDF)"
+            aria-label="Cetak Semua Raport (PDF)"
+            className="module-action border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+          >
+            <i aria-hidden="true" className="fa-solid fa-file-pdf" />
+          </button>
+          <button
+            type="button"
+            disabled={!students.length}
+            onClick={downloadLeger}
+            title="Unduh Leger Excel"
+            aria-label="Unduh Leger Excel"
+            className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+          </button>
+          <button
+            type="button"
+            disabled={!students.length}
+            onClick={() => print('leger')}
+            title="Cetak Leger (PDF)"
+            aria-label="Cetak Leger (PDF)"
+            className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+          >
+            <i aria-hidden="true" className="fa-solid fa-print" />
+          </button>
+        </div>
+      </div>
+
+      {/* Tabel Daftar Siswa */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden no-print">
+        <div className="p-3 bg-slate-900 text-white flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-print text-brand-400"></i>
+            <span>Daftar Siswa – {filtered.length} siswa ditampilkan</span>
+            {locked && (
+              <span className="bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                Terkunci
               </span>
-            </div>
+            )}
+          </div>
+          <span className="text-slate-400 text-[11px] font-mono">*Klik ikon mata untuk pratinjau raport siswa</span>
+        </div>
+
+        <div className="overflow-x-auto custom-scrollbar max-h-[560px]">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-10 border-b border-slate-300">
+              <tr>
+                <th className="py-2.5 px-3 text-center w-10">No</th>
+                <th className="py-2.5 px-3 w-28">NO INDUK</th>
+                <th className="py-2.5 px-4">NAMA LENGKAP</th>
+                <th className="py-2.5 px-2 text-center w-10">L/P</th>
+                <th className="py-2.5 px-2 text-center w-16 bg-brand-50 text-brand-900">KELAS</th>
+                <th className="py-2.5 px-3 text-center w-24 bg-indigo-50 text-indigo-900">JUMLAH</th>
+                <th className="py-2.5 px-3 text-center w-20 bg-amber-50 text-amber-900">RANKING</th>
+                <th className="py-2.5 px-3 text-center w-20 bg-indigo-50 text-indigo-900">RERATA</th>
+                <th className="py-2.5 px-3 text-center w-32">AKSI</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="py-8 text-center text-slate-400">
+                    <i className="fa-solid fa-inbox text-2xl mb-1 block"></i>
+                    Tidak ada siswa yang sesuai.
+                  </td>
+                </tr>
+              ) : filtered.map((student, index) => (
+                <tr key={student.nis} className="hover:bg-brand-50/40 transition group text-slate-700">
+                  <td className="py-2 px-3 text-center font-mono font-semibold">{index + 1}</td>
+                  <td className="py-2 px-3 font-mono text-slate-500 text-[11px]">{student.nis}</td>
+                  <td className="py-2 px-4 font-bold text-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      {student.ranking <= 3 && (
+                        <i className={`fa-solid fa-trophy text-xs ${
+                          student.ranking === 1 ? 'text-amber-500' :
+                          student.ranking === 2 ? 'text-slate-400' : 'text-amber-700'
+                        }`}></i>
+                      )}
+                      <span>{student.nama}</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 text-center font-mono text-slate-500 text-[11px]">{student.lp}</td>
+                  <td className="py-2 px-2 text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">{student.kelas || classId}</td>
+                  <td className="py-2 px-3 text-center font-mono font-bold text-slate-900 bg-indigo-50/30">
+                    {student.totalNilai ?? '–'}
+                  </td>
+                  <td className="py-2 px-3 text-center font-mono font-black text-amber-900 bg-amber-50/40">
+                    <span className={`inline-block px-1.5 py-0.5 rounded-md text-xs ${
+                      student.ranking === 1 ? 'bg-amber-500 text-white shadow-2xs' :
+                      student.ranking === 2 ? 'bg-slate-400 text-white' :
+                      student.ranking === 3 ? 'bg-amber-700 text-white' : ''
+                    }`}>
+                      {student.ranking ?? '–'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-center font-mono font-bold text-brand-700 bg-indigo-50/30">
+                    {student.rataRata || '–'}
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openRaportModal(student, classId)}
+                        title="Pratinjau Raport"
+                        aria-label="Pratinjau Raport"
+                        className="p-1.5 px-2.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs"
+                      >
+                        <i aria-hidden="true" className="fa-solid fa-eye"></i>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={locked}
+                        onClick={() => setEditing({ nis: student.nis, nama: student.nama, lp: student.lp })}
+                        title="Edit Siswa"
+                        aria-label="Edit Siswa"
+                        className="p-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer disabled:opacity-40"
+                      >
+                        <i aria-hidden="true" className="fa-solid fa-pen"></i>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => print('raport', student)}
+                        title="Simpan PDF"
+                        aria-label="Simpan PDF"
+                        className="p-1.5 px-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition cursor-pointer shadow-2xs"
+                      >
+                        <i aria-hidden="true" className="fa-solid fa-download"></i>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={locked}
+                        onClick={() => setDeleting(student)}
+                        title="Hapus Siswa"
+                        aria-label="Hapus Siswa"
+                        className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition cursor-pointer disabled:opacity-40"
+                      >
+                        <i aria-hidden="true" className="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Konfirmasi Hapus */}
+        {deleting && (
+          <div role="alert" className="flex flex-wrap items-center gap-3 border-t border-rose-200 p-3 bg-rose-50 text-xs">
+            <i className="fa-solid fa-triangle-exclamation text-rose-500"></i>
+            <span className="font-semibold text-rose-800">Hapus <strong>{deleting.nama}</strong> beserta nilainya dari leger {classId}?</span>
             <button
               type="button"
-              onClick={handlePrint}
-              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition cursor-pointer"
+              onClick={() => { changeReportStudent(classId, deleting.nis, null); setDeleting(null); }}
+              title="Konfirmasi Hapus" aria-label="Konfirmasi Hapus"
+              className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
             >
-              Cetak Sekarang
+              <i aria-hidden="true" className="fa-solid fa-trash" />
+            </button>
+            <button type="button" onClick={() => setDeleting(null)} title="Batal" aria-label="Batal"
+              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100">
+              <i aria-hidden="true" className="fa-solid fa-xmark" />
             </button>
           </div>
+        )}
+      </div>
 
-          {currentLeger.map((student) => (
-            <div key={student.nis} className="print-page-break">
-              <div className="no-print text-center text-xs text-slate-400 font-mono py-1">
-                --- Pembatas Halaman Siswa No. {student.no}: {student.nama} ---
-              </div>
-              <PrintableRaport
-                student={student}
-                schoolSettings={schoolSettings}
-                classInfo={activeClassInfo}
-                totalStudents={currentLeger.length}
+      {/* Modal Edit Siswa */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150 no-print">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <ModuleHeading
+                compact
+                label="Edit Data"
+                title={`Edit Siswa (${editing.nis})`}
+                description={`Kelas ${classId}`}
               />
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
+                title="Tutup Modal"
+                aria-label="Tutup Modal"
+              >
+                <i aria-hidden="true" className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <form
+              className="space-y-3 text-xs"
+              onSubmit={event => {
+                event.preventDefault();
+                if (!editing.nama.trim()) return;
+                changeReportStudent(classId, editing.nis, { nama: editing.nama.trim(), lp: editing.lp });
+                setEditing(null);
+              }}
+            >
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-600">Nama Lengkap Siswa:</label>
+                <input
+                  required
+                  aria-label="Nama lengkap"
+                  className="module-control w-full"
+                  placeholder="Nama lengkap siswa"
+                  value={editing.nama}
+                  onChange={event => setEditing({ ...editing, nama: event.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-600">Jenis Kelamin (L/P):</label>
+                <select
+                  aria-label="Jenis kelamin"
+                  className="module-control w-full"
+                  value={editing.lp}
+                  onChange={event => setEditing({ ...editing, lp: event.target.value })}
+                >
+                  <option value="L">L (Laki-laki)</option>
+                  <option value="P">P (Perempuan)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditing(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
+                  <span>Simpan</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Print Output: Raport */}
+      {printJob?.kind === 'raport' && (
+        <div className="hidden print-only">
+          {printJob.students.map((student, index) => (
+            <div key={student.nis} className={index < printJob.students.length - 1 ? 'print-page-break' : undefined}>
+              <PrintableRaport student={student} classInfo={classInfo} schoolSettings={schoolSettings} totalStudents={students.length} />
             </div>
           ))}
         </div>
       )}
 
-      {/* Grid Bawah: Daftar Ringkas Siswa */}
-      <div className="no-print bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
-        <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
-          <i className="fa-solid fa-list-check text-brand-600"></i>
-          Daftar Siswa Kelas {effectiveClassId} ({currentLeger.length} Siswa)
-        </h3>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {currentLeger.map((student) => {
-            const isSelected = student.nis === selectedStudentNis && printMode === 'single';
-            return (
-              <div
-                key={student.nis}
-                onClick={() => {
-                  setSelectedStudentNis(student.nis);
-                  setPrintMode('single');
-                }}
-                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-2 ${
-                  isSelected 
-                    ? 'bg-brand-50 border-brand-400 text-brand-900 shadow-2xs' 
-                    : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="font-bold text-xs truncate">
-                    {student.no}. {student.nama}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    NIS: {student.nis} • Rerata: <strong>{student.rataRata}</strong>
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openRaportModal(student);
-                  }}
-                  className="p-1 px-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-[10px] font-bold shrink-0 transition"
-                  title="Buka Modal Preview PDF"
-                >
-                  <i className="fa-solid fa-eye"></i>
-                </button>
-              </div>
-            );
-          })}
+      {/* Print Output: Leger */}
+      {printJob?.kind === 'leger' && (
+        <div className="hidden print-only">
+          <h2 className="font-bold">Leger STS {classId} · {schoolSettings.tahunAjaran}</h2>
+          <table className="w-full border-collapse text-[7px]">
+            <thead><tr>{['No Induk', 'Nama Lengkap', 'Kelas', ...allMapel.map(item => item.short), 'Jumlah', 'Peringkat'].map((title, index) =>
+              <th className="border p-0.5" key={index}>{title}</th>
+            )}</tr></thead>
+            <tbody>{gradeRows.map((row, index) =>
+              <tr key={index}>{row.map((value, column) => <td className="border p-0.5" key={column}>{value}</td>)}</tr>
+            )}</tbody>
+          </table>
         </div>
-      </div>
+      )}
 
     </div>
   );

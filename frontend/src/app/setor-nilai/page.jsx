@@ -1,258 +1,164 @@
 'use client';
 
+import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
-import Link from 'next/link';
+import * as XLSX from 'xlsx';
+import { teachingAssignments } from '@/lib/teaching';
+import SubmissionTable from '@/components/grades/SubmissionTable';
 import { useApp } from '@/context/AppContext';
 import ImportDknModal from '@/components/import/ImportDknModal';
 
 export default function SetorNilaiPage() {
-  const { 
-    currentUser,
-    isSuperAdmin,
-    isWaliKelas,
-    isGuruMapelOnly,
-    allClasses, 
-    allMapel, 
-    currentLeger, 
-    updateStudentGrade, 
-    activeClassInfo,
-    showToast 
-  } = useApp();
-
-  const [selectedMapelKey, setSelectedMapelKey] = useState(
-    currentUser.mapelAjar && currentUser.mapelAjar[0] ? currentUser.mapelAjar[0] : 'mat'
-  );
-  const [targetClassId, setTargetClassId] = useState('7K');
-  const [teacherName, setTeacherName] = useState(currentUser.nama);
+  const { currentUser, isSuperAdmin, allClasses, allMapel, legerByClass, schoolSettings, classStatus, importDknScores, showToast, recordSubmission } = useApp();
+  const [classChoice, setTargetClassId] = useState('');
+  const [subjectChoice, setSelectedMapelKey] = useState('');
   const [quickScoreInput, setQuickScoreInput] = useState('');
   const [isDknModalOpen, setIsDknModalOpen] = useState(false);
-
-  const activeMapel = allMapel.find(m => m.key === selectedMapelKey) || allMapel[8];
-
-  // Local draft nilai per siswa
-  const [gradesDraft, setGradesDraft] = useState(() => {
-    const initial = {};
-    currentLeger.forEach(s => {
-      initial[s.nis] = s.grades[selectedMapelKey] || 75;
-    });
-    return initial;
-  });
-
-  const handleScoreChange = (nis, val) => {
-    setGradesDraft(prev => ({
-      ...prev,
-      [nis]: val
-    }));
+  const [drafts, setDrafts] = useState({});
+  const assignments = teachingAssignments(currentUser, allMapel);
+  const eligibleClasses = isSuperAdmin ? allClasses : allClasses.filter(item => assignments.some(assignment => assignment.classId === item.id));
+  const targetClassId = eligibleClasses.some(item => item.id === classChoice) ? classChoice : eligibleClasses[0]?.id;
+  const eligibleSubjects = isSuperAdmin ? allMapel : allMapel.filter(item => assignments.some(assignment => assignment.classId === targetClassId && assignment.subjectKey === item.key));
+  const selectedMapelKey = eligibleSubjects.some(item => item.key === subjectChoice) ? subjectChoice : eligibleSubjects[0]?.key;
+  const activeMapel = allMapel.find(m => m.key === selectedMapelKey);
+  const currentLeger = legerByClass[targetClassId] || [];
+  const draftKey = targetClassId + ':' + selectedMapelKey;
+  const gradesDraft = drafts[draftKey] || {};
+  const locked = classStatus[targetClassId]?.isLocked;
+  const scoreFor = student => gradesDraft[student.nis] ?? student.grades[selectedMapelKey] ?? '';
+  const averageFor = student => {
+    const sts = scoreFor(student);
+    if (sts === '') return '';
+    const scores = [sts, gradesDraft[student.nis + ':uh1'], gradesDraft[student.nis + ':uh2']]
+      .filter(value => value !== undefined && value !== '').map(Number);
+    if (scores.some(value => !Number.isFinite(value) || value < 0 || value > 100)) return '';
+    return Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length);
   };
-
-  // Simulasikan pengiriman ke wali kelas
-  const handleSubmitGrades = (e) => {
-    e.preventDefault();
-
-    Object.entries(gradesDraft).forEach(([nis, val]) => {
-      updateStudentGrade(nis, selectedMapelKey, val);
-    });
-
-    showToast(`Nilai ${activeMapel.name} berhasil dikirim dan disinkronkan ke Leger Wali Kelas ${targetClassId}!`, 'success');
+  const handleScoreChange = (nis, value) => {
+    recordSubmission(targetClassId, selectedMapelKey);
+    setDrafts(prev => ({ ...prev, [draftKey]: { ...prev[draftKey], [nis]: value } }));
   };
-
-  const handleQuickFill = () => {
-    const val = Number(quickScoreInput);
-    if (!val || val < 0 || val > 100) {
-      showToast('Masukkan nilai valid antara 0 - 100', 'warning');
+  const handleSubmitGrades = () => {
+    const scores = currentLeger.filter(student => averageFor(student) !== '')
+      .map(student => ({ nis: student.nis, score: averageFor(student) }))
+      .filter(item => Number.isFinite(item.score) && item.score >= 0 && item.score <= 100);
+    if (locked || !scores.length || currentLeger.some(student => scoreFor(student) === '') || scores.length !== currentLeger.length) {
+      showToast('Lengkapi nilai 0–100. Leger yang terkunci tidak dapat diubah.', 'warning');
       return;
     }
-    const updated = {};
-    currentLeger.forEach(s => {
-      updated[s.nis] = val;
-    });
-    setGradesDraft(updated);
-    showToast(`Nilai seluruh siswa diset ke ${val}`, 'info');
+    importDknScores(targetClassId, selectedMapelKey, scores, 'Nilai telah dikirim ke leger wali kelas.');
   };
+  const handleQuickFill = () => {
+    const value = Number(quickScoreInput);
+    if (quickScoreInput.trim() === '' || !Number.isFinite(value) || value < 0 || value > 100) {
+      showToast('Masukkan nilai valid antara 0–100.', 'warning');
+      return;
+    }
+    setDrafts(prev => ({ ...prev, [draftKey]: Object.fromEntries(currentLeger.map(student => [student.nis, value])) }));
+    if (currentLeger.length) recordSubmission(targetClassId, selectedMapelKey);
+  };
+  const downloadTemplate = () => {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      [`DAFTAR NILAI STS ${String(schoolSettings.semester || 'GANJIL').toUpperCase()} MTs AL AMIRIYYAH BLOKAGUNG TAHUN PELAJARAN ${schoolSettings.tahunAjaran}`],
+      [`KELAS : ${targetClassId} | MAPEL : ${activeMapel.name} | KKM : ${activeMapel.kkm}`],
+      ['NO', 'NO INDUK', 'NAMA LENGKAP', 'UH 1', 'UH 2', 'NILAI STS', 'NILAI RATA-RATA', 'KETERCAPAIAN'],
+      ...currentLeger.map((student, index) => [index + 1, student.nis, student.nama]),
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'DKN');
+    XLSX.writeFile(workbook, `DKN-${targetClassId}-${selectedMapelKey}.xlsx`);
+  };
+
+  if (isSuperAdmin) return <SubmissionTable />;
+  if (!activeMapel) return <p className="text-sm">Belum ada penugasan mengajar. Hubungi admin.</p>;
 
   return (
     <div className="space-y-4">
       
       {/* Header Info */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1 px-2 rounded-lg bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase tracking-wider">
-                Portal Guru Mapel
-              </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight">
-                INPUT & IMPORT NILAI DKN MATA PELAJARAN
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Guru mata pelajaran dapat memasukkan nilai manual atau mengimpor file Excel DKN (Daftar Kumpulan Nilai).
-            </p>
-          </div>
+      <div className="module-panel space-y-3">
+        <ModuleHeading label="Portal Guru Mapel" title="Setor Nilai STS" description="Isi nilai siswa secara manual atau impor dari Excel DKN." />
 
-          <div className="flex items-center gap-2">
-            {/* Tombol Utama: Import File DKN Excel */}
-            <button
-              type="button"
-              onClick={() => setIsDknModalOpen(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs"
-            >
-              <i className="fa-solid fa-file-excel"></i>
-              <span>Import Nilai dari File Excel DKN</span>
-            </button>
-
-            {!isGuruMapelOnly && (
-              <Link
-                href="/leger"
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <i className="fa-solid fa-table-list"></i>
-                <span>Buka Leger</span>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* Form Pilihan Mapel & Kelas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl text-xs">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">Mata Pelajaran yang Diampu:</label>
-            <select
-              value={selectedMapelKey}
-              onChange={(e) => setSelectedMapelKey(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer"
-            >
-              {allMapel.map(m => (
-                <option key={m.key} value={m.key}>
-                  {m.code}. {m.name} (KKM: {m.kkm})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">Target Kelas:</label>
-            <select
-              value={targetClassId}
-              onChange={(e) => setTargetClassId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer"
-            >
-              <optgroup label="Kelas 7">
-                {allClasses.filter(c => c.tingkat === '7').map(c => (
-                  <option key={c.id} value={c.id}>
-                    Kelas {c.nama} (Wali: {c.wali})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Kelas 8">
-                {allClasses.filter(c => c.tingkat === '8').map(c => (
-                  <option key={c.id} value={c.id}>
-                    Kelas {c.nama} (Wali: {c.wali})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Kelas 9">
-                {allClasses.filter(c => c.tingkat === '9').map(c => (
-                  <option key={c.id} value={c.id}>
-                    Kelas {c.nama}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">Nama Guru Mapel:</label>
-            <input
-              type="text"
-              value={teacherName}
-              onChange={(e) => setTeacherName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none"
-              placeholder="Nama guru pengajar..."
-            />
-          </div>
-        </div>
-
-        {/* Info Box Format DKN */}
-        <div className="p-3 bg-emerald-50/70 border border-emerald-200 text-emerald-900 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <i className="fa-solid fa-circle-check text-emerald-600 text-base shrink-0"></i>
-            <div>
-              <p className="font-bold">Format Excel DKN MTs Al Amiriyyah Siap Diimport:</p>
-              <p className="text-[11px] text-emerald-800">
-                Kolom terbaca otomatis: <code>NO, INDUK, NAMA, UH 1, UH 2, N.PTS, N. R, RANK, KET</code>. Nilai diambil dari kolom <strong>N. R (Nilai Raport)</strong>.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsDknModalOpen(true)}
-            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            Buka Form Upload DKN →
+      </div>
+      <div className="module-toolbar" aria-label="Kontrol Setor Nilai">
+        <select aria-label="Kelas" value={targetClassId?.slice(0, 1) || ''} onChange={event => {
+          const level = event.target.value;
+          const firstClass = eligibleClasses.find(c => c.tingkat === level);
+          if (firstClass) setTargetClassId(firstClass.id);
+        }} className="module-control">
+          {['7', '8', '9']
+            .filter(level => eligibleClasses.some(c => c.tingkat === level))
+            .map(level => (
+              <option key={level} value={level}>{level}</option>
+            ))}
+        </select>
+        <select aria-label="Bagian" value={targetClassId} onChange={event => setTargetClassId(event.target.value)} className="module-control">
+          {eligibleClasses
+            .filter(c => c.tingkat === targetClassId?.slice(0, 1))
+            .map(c => (
+              <option key={c.id} value={c.id}>{c.id.slice(1)}</option>
+            ))}
+        </select>
+        <select aria-label="Mata Pelajaran yang Diampu" value={selectedMapelKey} onChange={event => setSelectedMapelKey(event.target.value)}
+          className="module-control min-w-0 max-w-full">
+        {eligibleSubjects.map(m => (
+          <option key={m.key} value={m.key}>
+            {m.code}. {m.name} (KKM: {m.kkm})
+          </option>
+        ))}
+        </select>
+        <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+          <button data-module-action data-action-tone="success" type="button" onClick={downloadTemplate} title="Unduh Template DKN" aria-label="Unduh Template DKN">
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
+          </button>
+          <button data-module-action data-action-tone="success" type="button" disabled={locked || !currentLeger.length} onClick={() => setIsDknModalOpen(true)}
+            title="Impor Nilai DKN" aria-label="Impor Nilai DKN">
+            <i aria-hidden="true" className="fa-solid fa-file-import" />
+          </button>
+          <input type="number" min="0" max="100" aria-label="Isi Nilai Cepat" value={quickScoreInput} onChange={event => setQuickScoreInput(event.target.value)}
+            placeholder="Isi nilai" className="module-control w-24 text-center font-mono" disabled={locked || !currentLeger.length} />
+          <button data-module-action type="button" disabled={locked || !currentLeger.length} onClick={handleQuickFill}
+            title="Terapkan Nilai ke Semua Siswa" aria-label="Terapkan Nilai ke Semua Siswa">
+            <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
+          </button>
+          <button data-module-action data-action-tone="primary" type="button" disabled={locked || !currentLeger.length} onClick={handleSubmitGrades}
+            title="Kirim Nilai ke Wali Kelas" aria-label="Kirim Nilai ke Wali Kelas">
+            <i aria-hidden="true" className="fa-solid fa-paper-plane" />
           </button>
         </div>
       </div>
-
-      {/* Toolbar Input & Quick Set */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-600">Isi Nilai Cepat:</span>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={quickScoreInput}
-            onChange={(e) => setQuickScoreInput(e.target.value)}
-            placeholder="Misal: 85"
-            className="w-24 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-mono text-center outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleQuickFill}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
-          >
-            Terapkan ke Semua
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleSubmitGrades}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
-        >
-          <i className="fa-solid fa-paper-plane"></i>
-          <span>Kirim Nilai ke Wali Kelas</span>
-        </button>
-      </div>
+      {!currentLeger.length && <p className="module-panel text-xs text-slate-600">Belum ada data siswa untuk kelas ini.</p>}
 
       {/* Tabel Input Nilai Siswa */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
-        <div className="p-3 bg-slate-900 text-white flex items-center justify-between text-xs font-semibold">
+        <div className="module-table-caption flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <i className="fa-solid fa-pen-to-square text-brand-400"></i>
             <span>Daftar Nilai Siswa {targetClassId} - Mapel: {activeMapel.name}</span>
           </div>
-          <span className="text-slate-400 font-mono text-[11px]">KKM Mapel: 70</span>
+          <span className="text-slate-400 font-mono text-[11px]">KKM Mapel: {activeMapel.kkm}</span>
         </div>
 
-        <div className="overflow-x-auto max-h-[550px] custom-scrollbar">
+        <div className="module-table max-h-[550px] custom-scrollbar">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-10 border-b border-slate-300">
               <tr>
                 <th className="py-2 px-3 text-center w-12">No</th>
-                <th className="py-2 px-3 w-28">NIS</th>
-                <th className="py-2 px-4">Nama Lengkap Siswa</th>
+                <th className="py-2 px-3 w-28">NO INDUK</th>
+                <th className="py-2 px-4">NAMA LENGKAP</th>
                 <th className="py-2 px-2 text-center w-12">L/P</th>
-                <th className="py-2 px-4 text-center w-36">Nilai STS (0-100)</th>
+                <th className="py-2 px-4 text-center">UH 1</th>
+                <th className="py-2 px-4 text-center">UH 2</th>
+                <th className="py-2 px-4 text-center w-36">NILAI STS</th>
+                <th className="py-2 px-4 text-center">NILAI RATA-RATA</th>
                 <th className="py-2 px-4 text-center w-36">Ketercapaian</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {currentLeger.map((student) => {
-                const val = gradesDraft[student.nis] !== undefined ? gradesDraft[student.nis] : '';
-                const numVal = Number(val);
-                const isTuntas = numVal >= 70;
+                const val = scoreFor(student);
+                const average = averageFor(student);
+                const isTuntas = average !== '' && average >= activeMapel.kkm;
 
                 return (
                   <tr key={student.nis} className="hover:bg-slate-50 transition">
@@ -260,6 +166,14 @@ export default function SetorNilaiPage() {
                     <td className="py-2 px-3 font-mono text-slate-500">{student.nis}</td>
                     <td className="py-2 px-4 font-bold text-slate-800">{student.nama}</td>
                     <td className="py-2 px-2 text-center text-slate-500 font-mono">{student.lp}</td>
+                    {['uh1', 'uh2'].map(field => (
+                      <td key={field} className="py-2 px-2 text-center">
+                        <input type="number" min="0" max="100" aria-label={field.toUpperCase() + ' ' + student.nama}
+                          value={gradesDraft[student.nis + ':' + field] ?? ''}
+                          onChange={event => handleScoreChange(student.nis + ':' + field, event.target.value)}
+                          className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center" />
+                      </td>
+                    ))}
                     <td className="py-2 px-4 text-center">
                       <input
                         type="number"
@@ -268,12 +182,13 @@ export default function SetorNilaiPage() {
                         value={val}
                         onChange={(e) => handleScoreChange(student.nis, e.target.value)}
                         className={`w-28 py-1 px-2 rounded-lg border text-center font-mono font-bold text-xs focus:ring-2 focus:ring-brand-500 outline-none transition ${
-                          numVal < 70 ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-300 bg-white text-slate-800'
+                          average !== '' && !isTuntas ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-300 bg-white text-slate-800'
                         }`}
                       />
                     </td>
+                    <td className="py-2 px-4 text-center font-mono">{average === '' ? '–' : average}</td>
                     <td className="py-2 px-4 text-center font-semibold">
-                      {val !== '' ? (
+                      {average !== '' ? (
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           isTuntas ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                         }`}>
@@ -288,20 +203,17 @@ export default function SetorNilaiPage() {
           </table>
         </div>
 
-        <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-          <button
-            type="button"
-            onClick={handleSubmitGrades}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
-          >
-            <i className="fa-solid fa-paper-plane"></i>
-            <span>Simpan & Kirim Nilai ke Leger Wali Kelas</span>
-          </button>
-        </div>
       </div>
 
       {/* Modal Import DKN Excel */}
       <ImportDknModal
+        key={draftKey}
+        fixedTarget
+        onImport={items => {
+          const imported = Object.fromEntries(items.filter(item => item.nis).map(item => [item.nis, item.score]));
+          if (currentLeger.some(student => Object.hasOwn(imported, student.nis))) recordSubmission(targetClassId, selectedMapelKey);
+          setDrafts(prev => ({ ...prev, [draftKey]: { ...prev[draftKey], ...imported } }));
+        }}
         isOpen={isDknModalOpen}
         onClose={() => setIsDknModalOpen(false)}
         targetClass={targetClassId}

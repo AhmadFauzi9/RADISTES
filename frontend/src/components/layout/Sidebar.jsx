@@ -36,7 +36,7 @@ export default function Sidebar() {
     },
     { 
       key: 'cetak-raport', 
-      title: 'Cetak Raport PDF', 
+      title: 'Raport', 
       icon: 'fa-print', 
       path: '/cetak-raport', 
       badge: isWaliKelas ? currentUser.kelasWali : null,
@@ -45,7 +45,7 @@ export default function Sidebar() {
     },
     { 
       key: 'setor-nilai', 
-      title: 'Setor & Import Nilai', 
+      title: 'Setor Nilai', 
       icon: 'fa-file-excel', 
       path: '/setor-nilai', 
       notifCount: pendingSubmissions.length,
@@ -53,19 +53,33 @@ export default function Sidebar() {
       visible: true 
     },
     { 
+      key: 'wali-kelas', 
+      title: 'Wali Kelas', 
+      icon: 'fa-user-tie', 
+      path: '/wali-kelas',
+      visible: isSuperAdmin
+    },
+    { 
       key: 'data-siswa', 
-      title: isSuperAdmin ? 'Data Siswa & Wali' : isWaliKelas ? `Siswa ${currentUser.kelasWali}` : 'Data Siswa', 
+      title: 'Data Siswa',
       icon: 'fa-users', 
       path: '/data-siswa',
-      visible: true 
+      visible: isSuperAdmin
+    },
+    {
+      key: 'guru-mapel', title: 'Guru Mapel', icon: 'fa-chalkboard-user', path: '/guru-mapel',
+      visible: isSuperAdmin
+    },
+    {
+      key: 'nilai-terbaik', title: 'Nilai Terbaik', icon: 'fa-trophy', path: '/nilai-terbaik',
+      visible: isGuruMapelOnly || isWaliKelas
     },
     { 
       key: 'pengaturan', 
       title: 'Pengaturan Raport', 
       icon: 'fa-gear', 
       path: '/pengaturan',
-      // Pengaturan lembaga hanya untuk Admin & Wali Kelas
-      visible: !isGuruMapelOnly 
+      visible: isSuperAdmin
     }
   ];
 
@@ -150,9 +164,9 @@ export default function Sidebar() {
           onClick={logout}
           className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50 font-medium transition w-full text-left cursor-pointer"
           title="Keluar dari Akun"
+        aria-label="Keluar dari Akun"
         >
-          <i className="fa-solid fa-right-from-bracket w-4 text-center text-sm text-rose-500"></i>
-          <span>Logout</span>
+          <i aria-hidden="true" className="fa-solid fa-right-from-bracket w-4 text-center text-sm text-rose-500"></i>
         </button>
       </nav>
     </aside>

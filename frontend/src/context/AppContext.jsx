@@ -22,10 +22,20 @@ export function AppProvider({ children }) {
 
   // Daftar Seluruh Guru di Sekolah (baik wali kelas maupun guru mapel murni)
   const [teachersList, setTeachersList] = useState(DAFTAR_GURU_SEKOLAH);
+  const [submissionRecords, setSubmissionRecords] = useState({});
+
+  const recordSubmission = (classId, subjectKey, sent = false) => {
+    if (!currentUser || currentUser.role === 'admin') return;
+    const key = [currentUser.username, classId, subjectKey].join(':');
+    setSubmissionRecords(previous => ({
+      ...previous,
+      [key]: { classId, subjectKey, teacher: currentUser.nama, username: currentUser.username, sent, updatedAt: new Date().toISOString() }
+    }));
+  };
 
   // User yang sedang Login (Default: null agar wajib login)
   const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthLoaded, setIsAuthLoaded] = useState(true);
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
   // Kelas Aktif yang sedang dibuka
   const [selectedClassId, setSelectedClassId] = useState('8A');
@@ -68,16 +78,12 @@ export function AppProvider({ children }) {
 
   // Siswa yang sedang di-preview untuk cetak raport
   const [previewStudent, setPreviewStudent] = useState(null);
+  const [previewClassId, setPreviewClassId] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // Inisialisasi Leger Awal (8A dan 7K)
   useEffect(() => {
-    const initial8A = generateInitialLegerData('8A');
-    const initial7K = generateInitialLegerData('7K');
-    setLegerByClass({
-      '8A': initial8A,
-      '7K': initial7K
-    });
+    setLegerByClass(Object.fromEntries(DAFTAR_KELAS.map(item => [item.id, generateInitialLegerData(item.id)])));
 
     // Cek sesi login aktif dari sessionStorage (atau localStorage)
     try {
@@ -300,16 +306,20 @@ export function AppProvider({ children }) {
   };
 
   // Import Nilai dari File Excel DKN ke Leger Kelas
-  const importDknScores = (targetClass, targetMapelKey, parsedScores) => {
+  const importDknScores = (targetClass, targetMapelKey, parsedScores, successMessage) => {
+    if (classStatus[targetClass]?.isLocked) {
+      showToast('Leger kelas ini terkunci.', 'warning');
+      return;
+    }
     setLegerByClass(prev => {
       const currentList = prev[targetClass] ? [...prev[targetClass]] : generateInitialLegerData(targetClass);
 
       const updatedList = currentList.map(student => {
         const matched = parsedScores.find(item => {
-          if (item.nis && student.nis && item.nis === student.nis) return true;
+          if (item.nis) return String(item.nis) === String(student.nis);
           const normA = (item.nama || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
           const normB = (student.nama || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-          return normA === normB || normA.includes(normB) || normB.includes(normA);
+          return Boolean(normA && normB && normA === normB);
         });
 
         if (matched && matched.score !== undefined && matched.score !== null) {
@@ -332,7 +342,8 @@ export function AppProvider({ children }) {
       };
     });
 
-    showToast(`Berhasil mengimpor nilai DKN untuk Kelas ${targetClass}!`, 'success');
+    showToast(successMessage || `Berhasil mengimpor nilai DKN untuk Kelas ${targetClass}!`, 'success');
+    if (successMessage) recordSubmission(targetClass, targetMapelKey, true);
   };
 
   // Update Penugasan Wali Kelas (Tunggal) - Otomatis merefleksikan role guru yang bersangkutan!
@@ -384,8 +395,9 @@ export function AppProvider({ children }) {
   };
 
   // Modal Raport
-  const openRaportModal = (student) => {
+  const openRaportModal = (student, classId = selectedClassId) => {
     setPreviewStudent(student);
+    setPreviewClassId(classId);
     setIsPreviewOpen(true);
   };
 
@@ -398,6 +410,17 @@ export function AppProvider({ children }) {
   const isWaliKelas = currentUser?.role === 'walikelas';
   const isGuruMapelOnly = currentUser?.role === 'gurumapel';
 
+  const changeReportStudent = (classId, nis, details) => {
+    if (classStatus[classId]?.isLocked || !(isSuperAdmin || (isWaliKelas && currentUser.kelasWali === classId))) return;
+    setLegerByClass(previous => {
+      const students = previous[classId] || [];
+      const updated = details
+        ? students.map(student => student.nis === nis ? { ...student, ...details } : student)
+        : students.filter(student => student.nis !== nis);
+      return { ...previous, [classId]: hitungRankingLeger(updated) };
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -406,6 +429,9 @@ export function AppProvider({ children }) {
         currentUser,
         isAuthLoaded,
         teachersList,
+        setTeachersList,
+        submissionRecords,
+        recordSubmission,
         loginGuru,
         logout,
         isSuperAdmin,
@@ -428,6 +454,8 @@ export function AppProvider({ children }) {
         importDknScores,
         pendingSubmissions,
         previewStudent,
+        previewClassId,
+        changeReportStudent,
         setPreviewStudent,
         isPreviewOpen,
         openRaportModal,

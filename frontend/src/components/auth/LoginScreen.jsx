@@ -1,31 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 export default function LoginScreen() {
-  const { loginGuru, schoolSettings, showToast } = useApp();
-  const router = useRouter();
+  const { loginGuru, schoolSettings } = useApp();
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('mutmaina');
+  const [password, setPassword] = useState('123456');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!username.trim()) {
-      showToast?.('Silakan masukkan username.', 'warning');
-      return;
-    }
-    const result = loginGuru(username.trim());
-    if (result?.success) {
-      router.push('/');
-    }
-  };
-
-  const handleSelectDemo = (demoUsername) => {
-    setUsername(demoUsername);
-    setPassword('123456');
+    if (!username.trim()) return;
+    loginGuru(username.trim());
   };
 
   return (
@@ -41,6 +28,9 @@ export default function LoginScreen() {
           </div>
           <h2 className="text-lg font-black tracking-tight flex items-center justify-center gap-1.5">
             <span>RADISTES</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              STS
+            </span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
             {schoolSettings.namaMadrasah}
@@ -61,7 +51,6 @@ export default function LoginScreen() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Masukkan username guru..."
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:ring-2 focus:ring-brand-500 outline-none transition"
-              autoFocus
             />
           </div>
 
@@ -83,44 +72,24 @@ export default function LoginScreen() {
           <button
             type="submit"
             className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer mt-2"
+          title="Masuk ke Dashboard"
+          aria-label="Masuk ke Dashboard"
           >
-            <i className="fa-solid fa-right-to-bracket"></i>
-            <span>Masuk ke Dashboard</span>
+            <i aria-hidden="true" className="fa-solid fa-right-to-bracket"></i>
           </button>
 
           {/* Info Akun Demo Ringkas untuk Pengujian */}
-          <div className="pt-2 border-t border-slate-100 text-[10.5px] text-slate-400 text-center space-y-1">
-            <p className="font-semibold text-slate-500">Klik Akun untuk Coba Cepat:</p>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('mutmaina')}
-                className="px-2 py-0.5 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-bold transition text-[10.5px] cursor-pointer"
-              >
-                mutmaina (8A)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('emil')}
-                className="px-2 py-0.5 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-bold transition text-[10.5px] cursor-pointer"
-              >
-                emil (7K)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('budi')}
-                className="px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold transition text-[10.5px] cursor-pointer"
-              >
-                budi (Mapel)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('admin')}
-                className="px-2 py-0.5 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold transition text-[10.5px] cursor-pointer"
-              >
-                admin
-              </button>
-            </div>
+          <div className="pt-2 border-t border-slate-100 text-[10.5px] text-slate-400 text-center space-y-0.5">
+            <p className="font-semibold text-slate-500">Contoh Akun untuk Uji Coba:</p>
+            <p>
+              Wali Kelas: <code className="text-brand-600 font-bold">mutmaina</code> (8A) | <code className="text-brand-600 font-bold">emil</code> (7K)
+            </p>
+            <p>
+              Guru Mapel: <code className="text-emerald-600 font-bold">budi</code> atau <code className="text-emerald-600 font-bold">hendra</code>
+            </p>
+            <p>
+              Admin: <code className="text-purple-600 font-bold">admin</code>
+            </p>
           </div>
 
         </form>

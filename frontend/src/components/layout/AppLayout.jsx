@@ -9,9 +9,19 @@ import LoginScreen from '../auth/LoginScreen';
 import { useApp } from '@/context/AppContext';
 
 export default function AppLayout({ children }) {
-  const { currentUser } = useApp();
+  const { currentUser, isAuthLoaded } = useApp();
 
-  // Jika belum login, langsung tampilkan layar login
+  // Tunggu inisialisasi auth
+  if (!isAuthLoaded) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-xs">
+        <i className="fa-solid fa-spinner fa-spin text-2xl mr-2 text-brand-500"></i>
+        <span>Memuat RADISTES...</span>
+      </div>
+    );
+  }
+
+  // Jika belum login, tampilkan layar login ExamLAN Pro
   if (!currentUser) {
     return (
       <>
@@ -29,12 +39,12 @@ export default function AppLayout({ children }) {
 
       {/* Main Container */}
       <main className="flex-grow w-full px-3 sm:px-6 lg:px-8 py-5">
-        <div className="grid grid-cols-1 md:grid-cols-[230px_minmax(0,1fr)] gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[230px_minmax(0,1fr)] gap-5 items-start print:block">
           {/* Sidebar Left */}
           <Sidebar />
 
           {/* Dynamic Content Right */}
-          <div className="min-w-0 space-y-4">
+          <div className="radistes-content min-w-0 space-y-4">
             {children}
           </div>
         </div>

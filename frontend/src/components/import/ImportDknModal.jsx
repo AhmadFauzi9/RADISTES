@@ -1,10 +1,11 @@
 'use client';
 
+import ModuleHeading from '@/components/common/ModuleHeading';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
 
-export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', targetMapel = 'tik' }) {
+export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', targetMapel = 'tik', fixedTarget = false, onImport }) {
   const { allMapel, allClasses, importDknScores, showToast } = useApp();
 
   const [selectedClass, setSelectedClass] = useState(targetClass);
@@ -62,15 +63,15 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
           if (!r) continue;
           r.forEach((cell, idx) => {
             const str = String(cell || '').trim().toUpperCase();
-            if (str === 'NAMA' || str === 'NAMA SISWA') {
+            if (['NAMA', 'NAMA SISWA', 'NAMA LENGKAP'].includes(str)) {
               headerRowIndex = i;
               colIndexNama = idx;
             }
-            if (str === 'INDUK' || str === 'NIS') {
+            if (['INDUK', 'NIS', 'NO INDUK'].includes(str)) {
               colIndexNis = idx;
             }
-            if (str === 'N. R' || str === 'N.R' || str === 'RAPORT' || str === 'N.PTS' || str === 'NILAI') {
-              if (colIndexScore === -1 || str === 'N. R') {
+            if (['N. R', 'N.R', 'RAPORT', 'N.PTS', 'NILAI', 'NILAI STS', 'NILAI RATA-RATA'].includes(str)) {
+              if (colIndexScore === -1 || ['N. R', 'NILAI RATA-RATA'].includes(str)) {
                 colIndexScore = idx;
               }
             }
@@ -105,17 +106,24 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
             if (!isNaN(num)) score = num;
           }
 
+          if (score === null || score < 0 || score > 100) continue;
           parsed.push({
             no: parsed.length + 1,
             nis: rawNis !== '-' ? rawNis : '',
             nama: rawNama,
-            score: score !== null ? score : 75
+            score
           });
         }
 
         setParsedData(parsed);
-        setSelectedClass(detectedClass);
-        setSelectedMapel(detectedMapel);
+        if (!fixedTarget) {
+          setSelectedClass(detectedClass);
+          setSelectedMapel(detectedMapel);
+        } else if (detectedClass !== targetClass || detectedMapel !== targetMapel) {
+          setParsedData([]);
+          showToast('Kelas atau mapel pada file berbeda dari pilihan saat ini.', 'warning');
+          return;
+        }
         showToast(`Berhasil membaca ${parsed.length} siswa dari file DKN!`, 'success');
       } catch (err) {
         console.error(err);
@@ -134,7 +142,8 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
       return;
     }
 
-    importDknScores(selectedClass, selectedMapel, parsedData);
+    if (onImport) onImport(parsedData);
+    else importDknScores(selectedClass, selectedMapel, parsedData);
     onClose();
   };
 
@@ -168,25 +177,19 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
         
         {/* Header Modal */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-              <i className="fa-solid fa-file-excel"></i>
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm sm:text-base">Import Nilai dari File Excel (DKN)</h3>
-              <p className="text-[11px] text-slate-500">Unggah file DKN daftar nilai guru mapel untuk langsung mengisi Leger kelas</p>
-            </div>
-          </div>
-          <button
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <ModuleHeading compact label="Impor Excel" title="Impor Nilai DKN" description="Unggah Excel daftar nilai untuk kelas dan mata pelajaran yang dipilih." />
+          <button data-module-action
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+          title="Tutup Modal"
+          aria-label="Tutup Modal"
           >
-            <i className="fa-solid fa-xmark text-lg"></i>
+            <i aria-hidden="true" className="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
 
@@ -195,9 +198,11 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
           <div>
             <label className="block text-[11px] font-bold text-slate-600 mb-1">Target Kelas:</label>
             <select
+              aria-label="Target kelas"
               value={selectedClass}
+              disabled={fixedTarget}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-800 focus:outline-none"
+              className="module-control w-full"
             >
               {allClasses.map(c => (
                 <option key={c.id} value={c.id}>Kelas {c.nama} ({c.wali})</option>
@@ -207,9 +212,11 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
           <div>
             <label className="block text-[11px] font-bold text-slate-600 mb-1">Mata Pelajaran:</label>
             <select
+              aria-label="Mata pelajaran"
               value={selectedMapel}
+              disabled={fixedTarget}
               onChange={(e) => setSelectedMapel(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-800 focus:outline-none"
+              className="module-control w-full"
             >
               {allMapel.map(m => (
                 <option key={m.key} value={m.key}>{m.name} ({m.short})</option>
@@ -219,16 +226,16 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
         </div>
 
         {/* Area Upload File */}
-        <div className="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-5 text-center bg-slate-50/50 transition">
+        <div className="module-upload">
           <input
             type="file"
-            id="dkn-file-input"
+            id="dkn-file-input" aria-label="Impor Nilai DKN"
             accept=".xlsx, .xls, .csv"
             onChange={handleFileUpload}
-            className="hidden"
+            className="sr-only"
           />
           <label htmlFor="dkn-file-input" className="cursor-pointer space-y-2 block">
-            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl">
+            <div className="module-upload-icon">
               <i className="fa-solid fa-cloud-arrow-up"></i>
             </div>
             <div>
@@ -248,19 +255,21 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
             <i className="fa-solid fa-lightbulb text-amber-600"></i>
             <span>Format kolom DKN yang dibaca: <code>NO, INDUK, NAMA, N. R</code></span>
           </div>
-          <button
+          <button data-module-action data-action-tone="success"
             type="button"
             onClick={handleDownloadSample}
             className="text-brand-700 hover:underline font-bold text-[11px] cursor-pointer"
+          title="Unduh Contoh DKN"
+          aria-label="Unduh Contoh DKN"
           >
-            <i className="fa-solid fa-download mr-1"></i> Unduh Contoh DKN (.xlsx)
+            <i aria-hidden="true" className="fa-solid fa-download"></i>
           </button>
         </div>
 
         {/* Preview Hasil Parsing */}
         {parsedData.length > 0 && (
           <div className="flex-1 overflow-hidden border border-slate-200 rounded-xl flex flex-col">
-            <div className="p-2 bg-slate-100 font-bold text-xs text-slate-700 flex justify-between items-center border-b">
+            <div className="module-table-caption flex flex-wrap items-center justify-between gap-2">
               <span>Preview Data Terbaca ({parsedData.length} Siswa)</span>
               <span className="text-[10px] text-emerald-600 font-semibold">Siap Diimpor ke Leger {selectedClass}</span>
             </div>
@@ -295,21 +304,24 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button
+          <button data-module-action
             type="button"
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+          title="Batal"
+          aria-label="Batal"
           >
-            Batal
+            <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
-          <button
+          <button data-module-action data-action-tone="primary"
             type="button"
             disabled={parsedData.length === 0 || isProcessing}
             onClick={handleApplyImport}
             className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5"
+          title={onImport ? 'Masukkan ke Draf' : 'Terapkan ke Leger'}
+          aria-label={onImport ? 'Masukkan ke Draf' : 'Terapkan ke Leger'}
           >
-            <i className="fa-solid fa-check"></i>
-            <span>Terapkan ke Leger Kelas {selectedClass}</span>
+            <i aria-hidden="true" className="fa-solid fa-check"></i>
           </button>
         </div>
 
