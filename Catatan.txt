@@ -1,0 +1,90 @@
+HALAMAN ADMIN:
+1.  tambahkan halaman guru mapel yang berisi :
+    a. menu untuk input manual data guru mapel beserta kode guru, nama guru, kelas yang di ampu beserta mapelnya
+
+## --------------------------------------------------------###
+
+HALAMAN GURU MAPEL
+1.  MENU dashboard
+    A.  Isi tampilan dashboard guru mapel :
+        a). deadline pengiriman nilai ke walikelas
+        b). Daftar kelas yang di ampu beserta informasi:
+            1. Jumlah siswa dalam kelas
+            2. persentase kelengkapan nilai leger dalam kelas
+            3. rata rata nilai dalam kelas
+            4. nilai tertinggi/terendah
+            5. kesiapan kirim ke wali kelas
+        c). (seperti tampilan sekarang namun tidak ada peringkat) Alur Kerja Aplikasi Raport Tengah Semester (RADISTES)
+2.  MENU setor nilai (yang perlu di ubah)
+    A.  Tampilan leger tidak boleh di atur halaman data siswa, tapi termasuk bagian independen dari halaman setor nila :
+        a.  Form "Kelas yang Diampu"
+        b.  Form "Mata Pelajaran yang Diampu"
+        c.  bawahnya tetap yang sekarang tombol "Template DKN" dan "Import Nilai DKN"
+        d.  bawahnya tetap yang sekarang "Isi Nilai Cepat:" dan tombol "Kirim Nilai", ketika tekan kirim nilai, maka:
+            - nilai otomatis masuk ke "Leger Nilai STS" pada kelas dan mapelnya masing-masing, sehingga wali kelas tidak perlu input manual ataupun import lagi.
+            - wali kelas tinggal mengecek apakah nilai sudah penuh dan apakah masih ada yang di bawah kkm
+            - di tabel leger di beri warna merah pada nilai yang di bawah kkm
+        e.  bawahnya tetap tabel dengan desain yang sekarang dan isinya leger yang di pilih sesuai pilihan poin a dan b
+        f.  tetap ada tulisan seperti yang sekarang Daftar Nilai Siswa 7K - Mapel: Matematika | KKM Mapel : 70
+        g.  header tabel | NO | NO INDUK | NAMA LENGKAP | L/P | UH 1 | UH 2 | NILAI STS | NILAI RATA-RATA | KETERCAPAIAN |
+    B.  Karena setiap kelas/rombel sudah ada wali kelasnya masing masing jadi ketika menekan tombol kirim nilai maka secara otomatis akan mengirim nilai ke wali kelas tersebut. jadi hilangkan targer wali kelas
+    C.  hilangkan nama guru mapel, karena yang login sudah jelas guru tersebut jadi buat apa ada form nama guru mapel itu sendiri
+    D.  Hapus tombol "Import nilai dari file excel DKN" dan Pertahankan tombol "Buka form upload DKN" lalu ubah menjadi "Import Nilai DKN"
+    E.  Di sebelah tombol "Import Nilai DKN" tambahkan tombol download "Template DKN"
+        "Template DKN" adalah file excel berisi kolom:
+        a.  Judul/Header = DAFTAR NILAI STS GANJIL MTs AL AMRIYYAH BLOKAGUNG TAHUN PELAJARAN 2026/2027
+        b.  tepat di atas tabel = KELAS : Misal 7K | MAPEL : Misal : Informatika | KKM : 70
+        c.  kolom header = NO | NO INDUK | NAMA LENGKAP | UH 1 | UH 2 | NILAI STS | NILAI RATA-RATA | KETERCAPAIAN |
+3.  MENU Data siswa di role guru mapel di sembunyikan karena sepertinya role guru mapel tidak butuh data siswa
+4.  Tambah MENU nilai terbaik:
+    a. tampilan 3 nilai terbaik dari masing-masing kelas dan mapel yang diampu
+
+## --------------------------------------------------------###
+
+HALAMAN WALI KELAS yang juga termasuk guru mapel
+1.  MENU dashboard
+    A.  Isi tampilan dashboard wali kelas beserta guru mapel :
+        a). deadline pengiriman nilai ke walikelas
+        b). Daftar anak kelas didiknya beserta informasi:
+            1. Jumlah siswa kelas didiknya
+            2. persentase kelengkapan nilai leger kelas didiknya
+            3. rata rata nilai kelas didiknya
+            4. nilai tertinggi/terendah kelas didiknya
+            5. kesiapan cetak Raport wali kelas
+        c). Daftar kelas yang di ampu beserta informasi:
+            1. Jumlah siswa dalam kelas
+            2. persentase kelengkapan nilai leger dalam kelas
+            3. rata rata nilai dalam kelas
+            4. nilai tertinggi/terendah
+            5. kesiapan kirim ke wali kelas
+        d). (seperti tampilan sekarang) Alur Kerja Aplikasi Raport Tengah Semester (RADISTES) & Peringkat Kelas
+2.  MENU Leger Nilai STS
+    A.  hapus tombol "Import DKN Excel"
+3.  MENU Cetak Raport
+    A.  tampilan header seperti judul dan tab Mode Cetak tetap seperti sekarang.
+    B.  Ubah tampilan raport menjadi tabel data siswa dalam kelas tersebut, dengan isi:
+        a). informasi wali kelas, kelas, tahun Pelajaran
+        b). NO | NO INDUK | NAMA LENGKAP | PERINGKAT | AKSI |
+            - isi tombol aksi : 
+4.  MENU setor nilai (yang perlu di ubah)
+    A.  Tampilan leger tidak boleh di atur halaman data siswa, tapi termasuk bagian independen dari halaman setor nila :
+        a.  Form "Kelas yang Diampu"
+        b.  Form "Mata Pelajaran yang Diampu"
+        c.  bawahnya tetap yang sekarang tombol "Template DKN" dan "Import Nilai DKN"
+        d.  bawahnya tetap yang sekarang "Isi Nilai Cepat:" dan tombol "Kirim Nilai", ketika tekan kirim nilai, maka:
+            - nilai otomatis masuk ke "Leger Nilai STS" pada kelas dan mapelnya masing-masing, sehingga wali kelas tidak perlu input manual ataupun import lagi.
+            - wali kelas tinggal mengecek apakah nilai sudah penuh dan apakah masih ada yang di bawah kkm
+            - di tabel leger di beri warna merah pada nilai yang di bawah kkm
+        e.  bawahnya tetap tabel dengan desain yang sekarang dan isinya leger yang di pilih sesuai pilihan poin a dan b
+        f.  tetap ada tulisan seperti yang sekarang Daftar Nilai Siswa 7K - Mapel: Matematika | KKM Mapel : 70
+        g.  header tabel | NO | NO INDUK | NAMA LENGKAP | L/P | UH 1 | UH 2 | NILAI STS | NILAI RATA-RATA | KETERCAPAIAN |
+    B.  Karena setiap kelas/rombel sudah ada wali kelasnya masing masing jadi ketika menekan tombol kirim nilai maka secara otomatis akan mengirim nilai ke wali kelas tersebut. jadi hilangkan targer wali kelas
+    C.  hilangkan nama guru mapel, karena yang login sudah jelas guru tersebut jadi buat apa ada form nama guru mapel itu sendiri
+    D.  Hapus tombol "Import nilai dari file excel DKN" dan Pertahankan tombol "Buka form upload DKN" lalu ubah menjadi "Import Nilai DKN"
+    E.  Di sebelah tombol "Import Nilai DKN" tambahkan tombol download "Template DKN"
+        "Template DKN" adalah file excel berisi kolom:
+        a.  Judul/Header = DAFTAR NILAI STS GANJIL MTs AL AMRIYYAH BLOKAGUNG TAHUN PELAJARAN 2026/2027
+        b.  tepat di atas tabel = KELAS : Misal 7K | MAPEL : Misal : Informatika | KKM : 70
+        c.  kolom header = NO | NO INDUK | NAMA LENGKAP | UH 1 | UH 2 | NILAI STS | NILAI RATA-RATA | KETERCAPAIAN |
+
+## --------------------------------------------------------###
