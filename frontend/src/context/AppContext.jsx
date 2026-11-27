@@ -13,7 +13,7 @@ import {
   roundLegerGrade
 } from '@/lib/masterData';
 import { normalizeTeacherAssignments } from '@/lib/teaching';
-import { readStudentBiodata, storeStudentBiodata, STUDENT_BIODATA_KEY } from '@/lib/studentBiodata';
+import { readStudentBiodata, storeStudentBiodata, studentBiodataKey, STUDENT_BIODATA_KEY } from '@/lib/studentBiodata';
 import { readWaliReportSettings, storeWaliReportSettings, WALI_REPORT_SETTINGS_KEY } from '@/lib/waliReportSettings';
 import { activeLegerSubjects, readSubjectCatalog } from '@/lib/subjectCatalog';
 
@@ -552,21 +552,50 @@ export function AppProvider({ children }) {
   const isWaliKelas = currentUser?.role === 'walikelas';
   const isGuruMapelOnly = currentUser?.role === 'gurumapel';
 
-  const saveStudentBiodata = (classId, nis, details) => {
-    if (!isWaliKelas || currentUser.kelasWali !== classId ||
-      resolveTeacherRole(currentUser)?.kelasWali !== classId ||
-      !legerByClass[classId]?.some(student => student.nis === nis)) {
-      showToast('Biodata hanya dapat diubah oleh wali kelas siswa ini.', 'warning');
-      return false;
-    }
+  const persistStudentBiodata = (entries) => {
     try {
-      setStudentBiodata(storeStudentBiodata(localStorage, classId, nis, details));
+      setStudentBiodata(storeStudentBiodata(localStorage, entries));
       return true;
     } catch (error) {
       console.error(error);
       showToast('Biodata siswa gagal disimpan ke browser.', 'warning');
       return false;
     }
+  };
+
+  const findStudent = (classId, nis) =>
+    classesList.some(cls => cls.id === classId) && legerByClass[classId]?.find(student => String(student.nis) === String(nis));
+
+  const saveStudentBiodata = (classId, nis, details) => {
+    const canEdit = isSuperAdmin || (isWaliKelas && currentUser.kelasWali === classId &&
+      resolveTeacherRole(currentUser)?.kelasWali === classId);
+    const student = canEdit && findStudent(classId, nis);
+    if (!student) {
+      showToast('Biodata hanya dapat diubah oleh admin atau wali kelas yang bertugas.', 'warning');
+      return false;
+    }
+    return persistStudentBiodata([{ classId, nis: student.nis, details }]);
+  };
+
+  const importStudentBiodata = (entries) => {
+    if (!isSuperAdmin || !entries.length) return false;
+    const seen = new Set();
+    const updates = [];
+    for (const { classId, nis, details, rowNumber } of entries) {
+      const student = findStudent(classId, nis);
+      if (!student) {
+        showToast(`Baris ${rowNumber}: NIS dan rombel tidak cocok dengan Data Siswa.`, 'warning');
+        return false;
+      }
+      const key = studentBiodataKey(classId, student.nis);
+      if (seen.has(key)) {
+        showToast(`Baris ${rowNumber}: NIS dan rombel tercatat lebih dari sekali.`, 'warning');
+        return false;
+      }
+      seen.add(key);
+      updates.push({ classId, nis: student.nis, details });
+    }
+    return persistStudentBiodata(updates);
   };
 
   const changeReportStudent = (classId, nis, details) => {
@@ -612,6 +641,7 @@ export function AppProvider({ children }) {
         legerByClass,
         studentBiodata,
         saveStudentBiodata,
+        importStudentBiodata,
         updateStudentGrade,
         updateStudentMeta,
         classStatus,

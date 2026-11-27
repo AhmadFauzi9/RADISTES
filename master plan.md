@@ -1,5 +1,7 @@
 # Master Plan RADISTES
 
+Sebelum menghubungkan UI ke Go, gunakan [Workflow RADISTES](docs/workflow-radistes.md) untuk mengikuti alur tiap portal dan [Dokumentasi Perilaku Frontend](docs/perilaku-frontend-radistes.md) untuk memeriksa aturan nilai, batas prototipe, serta skenario penerimaan backend.
+
 ## 1. Tujuan dan keputusan arsitektur
 
 Selesaikan **RADISTES terlebih dahulu** sebagai aplikasi mandiri. Gunakan **Next.js** untuk frontend dan **Go** untuk API, autentikasi, aturan penilaian, serta penyimpanan. Gunakan **MySQL atau MariaDB** sebagai database awal agar sesuai dengan lingkungan XAMPP dan skema SQL yang sudah ada sebagai referensi. Pilih satu mesin dan versi untuk pengembangan dan pengujian migrasi sebelum menulis migrasi produksi.
@@ -65,6 +67,7 @@ Gunakan foreign key lokal untuk relasi dalam RADISTES. Untuk arsip nilai, nonakt
 | --- | --- |
 | `POST /api/v1/auth/login`, `GET /api/v1/me` | Membuat sesi dan mengembalikan profil, role, serta penugasan yang berlaku. Gunakan akun server dengan sandi yang di-hash dan cookie sesi yang aman. |
 | `GET /api/v1/rombel/{id}/siswa?periode_id=...` | Mengembalikan daftar siswa berdasarkan riwayat rombel dan periode. |
+| `PATCH /api/v1/siswa/{id}/biodata`, `POST /api/v1/siswa/biodata/impor` | Edit manual untuk admin atau wali yang bertugas. Impor massal khusus admin mencocokkan siswa terdaftar, memvalidasi semua baris, dan mempertahankan nilai lama pada kolom kosong. |
 | `GET /api/v1/mapel?periode_id=...`, `GET /api/v1/penugasan?periode_id=...` | Memuat mapel aktif berurutan dan penugasan untuk filter, modal, dan template impor. |
 | `PUT /api/v1/penugasan/{id}/draft`, `POST /api/v1/penugasan/{id}/setoran` | Menyimpan draft dan mengirim versi yang telah divalidasi. |
 | `GET /api/v1/rombel/{id}/leger?periode_id=...` | Mengembalikan kolom mapel, nilai, status kelengkapan, total, rata-rata, dan peringkat. |

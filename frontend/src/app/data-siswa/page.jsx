@@ -3,9 +3,10 @@
 import ModuleHeading from '@/components/common/ModuleHeading';
 import ModuleSearch from '@/components/common/ModuleSearch';
 import ModulePagination from '@/components/common/ModulePagination';
+import ImportStudentBiodataModal from '@/components/import/ImportStudentBiodataModal';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatStudentBirth, studentBiodataKey } from '@/lib/studentBiodata';
+import { formatStudentBirth, studentBiodataKey, STUDENT_BIODATA_FIELDS } from '@/lib/studentBiodata';
 
 export default function DataSiswaPage() {
   const {
@@ -16,6 +17,8 @@ export default function DataSiswaPage() {
     legerByClass,
     studentBiodata,
     saveStudentBiodata,
+    importStudentBiodata,
+    classStatus,
     changeReportStudent,
     showToast
   } = useApp();
@@ -26,6 +29,7 @@ export default function DataSiswaPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [editing, setEditing] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [deletingKey, setDeletingKey] = useState(null);
 
   if (!isSuperAdmin && !isWaliKelas) {
@@ -75,14 +79,14 @@ export default function DataSiswaPage() {
   const activeClassId = isWaliKelas ? currentUser.kelasWali : levelFilter && sectionFilter ? `${levelFilter}${sectionFilter}` : '';
   const activeClassInfo = activeClassId ? allClasses.find(c => c.id === activeClassId) : null;
   const titleSuffix = activeClassId ? `Kelas ${activeClassId}` : levelFilter ? `Kelas ${levelFilter}` : sectionFilter ? `Bagian ${sectionFilter}` : 'Semua Kelas';
+  const identityLocked = Boolean(classStatus[editing?.classId]?.isLocked);
 
   const handleSaveEdit = (event) => {
     event.preventDefault();
     if (!editing) return;
-    if (isWaliKelas) {
-      if (!saveStudentBiodata(editing.classId, editing.nis, editing.biodata)) return;
-    } else {
-      if (!editing.nama.trim()) return;
+    if (isSuperAdmin && !identityLocked && !editing.nama.trim()) return;
+    if (!saveStudentBiodata(editing.classId, editing.nis, editing.biodata)) return;
+    if (isSuperAdmin && !identityLocked) {
       changeReportStudent(editing.classId, editing.nis, {
         nama: editing.nama.trim(),
         lp: editing.lp,
@@ -192,6 +196,10 @@ export default function DataSiswaPage() {
         </div>
 
         {isSuperAdmin && <div aria-label="Aksi data siswa" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
+          <button type="button" data-module-action data-action-tone="success" onClick={() => setImportOpen(true)}
+            title="Impor Biodata Excel" aria-label="Impor Biodata Excel">
+            <i aria-hidden="true" className="fa-solid fa-file-import" />
+          </button>
           <button
             type="button"
             onClick={() => showToast('Fitur tambah siswa akan aktif ketika backend database terhubung!', 'info')}
@@ -335,7 +343,7 @@ export default function DataSiswaPage() {
       {/* Modal Edit Siswa */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <ModuleHeading
                 compact
@@ -355,62 +363,39 @@ export default function DataSiswaPage() {
             </div>
 
             <form className="space-y-3 text-xs" onSubmit={handleSaveEdit}>
-              {isWaliKelas ? (
-                <>
-                  {[
-                    { key: 'tempatLahir', label: 'Tempat Lahir', type: 'text' },
-                    { key: 'tanggalLahir', label: 'Tanggal Lahir', type: 'date' },
-                    { key: 'namaOrangTua', label: 'Nama Orang Tua', type: 'text' },
-                  ].map(({ key, label, type }) => (
-                    <label key={key} className="block space-y-1 font-bold text-slate-600">
-                      <span className="text-[11px]">{label}</span>
-                      <input type={type} name={key} className="module-control w-full" value={editing.biodata[key]}
-                        onChange={event => {
-                          const value = event.target.value;
-                          setEditing(previous => ({ ...previous, biodata: { ...previous.biodata, [key]: value } }));
-                        }} />
-                    </label>
-                  ))}
-                </>
-              ) : (
-                <>
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-600">Nama Lengkap Siswa:</label>
-                <input
-                  required
-                  aria-label="Nama lengkap"
-                  className="module-control w-full"
-                  placeholder="Nama lengkap siswa"
-                  value={editing.nama}
-                  onChange={event => setEditing({ ...editing, nama: event.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-600">Jenis Kelamin (L/P):</label>
-                <select
-                  aria-label="Jenis kelamin"
-                  className="module-control w-full"
-                  value={editing.lp}
-                  onChange={event => setEditing({ ...editing, lp: event.target.value })}
-                >
-                  <option value="L">L (Laki-laki)</option>
-                  <option value="P">P (Perempuan)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-600">Keterangan:</label>
-                <input
-                  aria-label="Keterangan"
-                  className="module-control w-full"
-                  placeholder="cth: Aktif, Pindahan, dll."
-                  value={editing.keterangan}
-                  onChange={event => setEditing({ ...editing, keterangan: event.target.value })}
-                />
-              </div>
-                </>
+              {isSuperAdmin && (
+                <fieldset disabled={identityLocked} className="space-y-3 disabled:opacity-60">
+                  {identityLocked && <p className="text-slate-600">Identitas utama dikunci bersama Leger. Biodata tetap dapat diperbarui.</p>}
+                  <label className="block space-y-1 text-[11px] font-bold text-slate-600">
+                    <span>Nama Lengkap Siswa</span>
+                    <input required className="module-control w-full" value={editing.nama}
+                      onChange={event => setEditing({ ...editing, nama: event.target.value })} />
+                  </label>
+                  <label className="block space-y-1 text-[11px] font-bold text-slate-600">
+                    <span>Jenis Kelamin (L/P)</span>
+                    <select className="module-control w-full" value={editing.lp}
+                      onChange={event => setEditing({ ...editing, lp: event.target.value })}>
+                      <option value="L">L (Laki-laki)</option>
+                      <option value="P">P (Perempuan)</option>
+                    </select>
+                  </label>
+                  <label className="block space-y-1 text-[11px] font-bold text-slate-600">
+                    <span>Keterangan</span>
+                    <input className="module-control w-full" value={editing.keterangan}
+                      onChange={event => setEditing({ ...editing, keterangan: event.target.value })} />
+                  </label>
+                </fieldset>
               )}
+              {STUDENT_BIODATA_FIELDS.map(({ key, label, type }) => (
+                <label key={key} className="block space-y-1 font-bold text-slate-600">
+                  <span className="text-[11px]">{label}</span>
+                  <input type={type} name={key} className="module-control w-full" value={editing.biodata[key]}
+                    onChange={event => {
+                      const value = event.target.value;
+                      setEditing(previous => ({ ...previous, biodata: { ...previous.biodata, [key]: value } }));
+                    }} />
+                </label>
+              ))}
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
@@ -431,6 +416,10 @@ export default function DataSiswaPage() {
             </form>
           </div>
         </div>
+      )}
+      {isSuperAdmin && importOpen && (
+        <ImportStudentBiodataModal students={filteredStudents} onImport={importStudentBiodata}
+          onClose={() => setImportOpen(false)} showToast={showToast} />
       )}
     </div>
   );
