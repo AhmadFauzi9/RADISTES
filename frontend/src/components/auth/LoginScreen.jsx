@@ -72,7 +72,7 @@ export default function LoginScreen() {
           <button
             type="submit"
             className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer mt-2"
-          title="Masuk ke Dashboard"
+          data-tooltip="Masuk ke Dashboard"
           aria-label="Masuk ke Dashboard"
           >
             <i aria-hidden="true" className="fa-solid fa-right-to-bracket"></i>

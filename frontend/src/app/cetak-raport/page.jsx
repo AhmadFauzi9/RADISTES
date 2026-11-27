@@ -212,33 +212,30 @@ export default function CetakRaportPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="button"
             disabled={!filtered.length || Boolean(printJob)}
             onClick={() => outputReport(isSuperAdmin ? 'download' : 'raport')}
-            title={isSuperAdmin ? 'Unduh Semua Raport PDF' : 'Cetak Semua Raport (PDF)'}
+            data-tooltip={isSuperAdmin ? 'Unduh Semua Raport PDF' : 'Cetak Semua Raport (PDF)'}
             aria-label={isSuperAdmin ? 'Unduh Semua Raport PDF' : 'Cetak Semua Raport (PDF)'}
-            className="module-action border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
           >
-            <i aria-hidden="true" className={`fa-solid ${isDownloading ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`} />
+            <i aria-hidden="true" className={`fa-solid ${isDownloading ? 'fa-spinner fa-spin' : isSuperAdmin ? 'fa-download' : 'fa-print'}`} />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="success"
             type="button"
             disabled={!filtered.length}
             onClick={downloadLeger}
-            title="Unduh Leger Excel"
+            data-tooltip="Unduh Leger Excel"
             aria-label="Unduh Leger Excel"
-            className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="print"
             type="button"
             disabled={!filtered.length}
             onClick={() => outputReport('leger')}
-            title="Cetak Leger (PDF)"
+            data-tooltip="Cetak Leger (PDF)"
             aria-label="Cetak Leger (PDF)"
-            className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50"
           >
             <i aria-hidden="true" className="fa-solid fa-print" />
           </button>
@@ -261,18 +258,18 @@ export default function CetakRaportPage() {
         </div>
 
         <div className="overflow-x-auto custom-scrollbar max-h-[560px]">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="module-table-compact w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-10 border-b border-slate-300">
               <tr>
-                <th className="py-2.5 px-3 text-center w-10">No</th>
-                <th className="py-2.5 px-3 w-28">NO INDUK</th>
-                <th className="py-2.5 px-4">NAMA LENGKAP</th>
-                <th className="py-2.5 px-2 text-center w-10">L/P</th>
-                <th className="py-2.5 px-2 text-center w-16 bg-brand-50 text-brand-900">KELAS</th>
-                <th className="py-2.5 px-3 text-center w-24 bg-indigo-50 text-indigo-900">JUMLAH</th>
-                <th className="py-2.5 px-3 text-center w-20 bg-amber-50 text-amber-900">RANKING</th>
-                <th className="py-2.5 px-3 text-center w-20 bg-indigo-50 text-indigo-900">RERATA</th>
-                <th className="py-2.5 px-3 text-center w-32">AKSI</th>
+                <th className="text-center w-10">No</th>
+                <th className="w-28">NO INDUK</th>
+                <th>NAMA LENGKAP</th>
+                <th className="text-center w-10">L/P</th>
+                <th className="text-center w-16 bg-brand-50 text-brand-900">KELAS</th>
+                <th className="text-center w-24 bg-indigo-50 text-indigo-900">JUMLAH</th>
+                <th className="text-center w-20 bg-amber-50 text-amber-900">RANKING</th>
+                <th className="text-center w-20 bg-indigo-50 text-indigo-900">RERATA</th>
+                <th className="text-center w-32">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -287,9 +284,9 @@ export default function CetakRaportPage() {
                 const isRowLocked = classStatus[student.studentClassId]?.isLocked;
                 return (
                   <tr key={`${student.studentClassId}-${student.nis}`} className="hover:bg-brand-50/40 transition group text-slate-700">
-                    <td className="py-2 px-3 text-center font-mono font-semibold">{startIndex + index + 1}</td>
-                    <td className="py-2 px-3 font-mono text-slate-500 text-[11px]">{student.nis}</td>
-                    <td className="py-2 px-4 font-bold text-slate-800">
+                    <td className="text-center font-mono font-semibold">{startIndex + index + 1}</td>
+                    <td className="font-mono text-slate-500 text-[11px]">{student.nis}</td>
+                    <td className="font-bold text-slate-800">
                       <div className="flex items-center gap-1.5">
                         {student.ranking <= 3 && (
                           <i className={`fa-solid fa-trophy text-xs ${
@@ -300,12 +297,12 @@ export default function CetakRaportPage() {
                         <span>{student.nama}</span>
                       </div>
                     </td>
-                    <td className="py-2 px-2 text-center font-mono text-slate-500 text-[11px]">{student.lp}</td>
-                    <td className="py-2 px-2 text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">{student.studentClassId}</td>
-                    <td className="py-2 px-3 text-center font-mono font-bold text-slate-900 bg-indigo-50/30">
+                    <td className="text-center font-mono text-slate-500 text-[11px]">{student.lp}</td>
+                    <td className="text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">{student.studentClassId}</td>
+                    <td className="text-center font-mono font-bold text-slate-900 bg-indigo-50/30">
                       {student.totalNilai ?? '–'}
                     </td>
-                    <td className="py-2 px-3 text-center font-mono font-black text-amber-900 bg-amber-50/40">
+                    <td className="text-center font-mono font-black text-amber-900 bg-amber-50/40">
                       <span className={`inline-block px-1.5 py-0.5 rounded-md text-xs ${
                         student.ranking === 1 ? 'bg-amber-500 text-white shadow-2xs' :
                         student.ranking === 2 ? 'bg-slate-400 text-white' :
@@ -314,17 +311,17 @@ export default function CetakRaportPage() {
                         {student.ranking ?? '–'}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-center font-mono font-bold text-brand-700 bg-indigo-50/30">
+                    <td className="text-center font-mono font-bold text-brand-700 bg-indigo-50/30">
                       {student.rataRata || '–'}
                     </td>
-                    <td className="py-2 px-3 text-center">
+                    <td className="text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => openRaportModal(student, student.studentClassId)}
-                          title="Pratinjau Raport"
+                          data-tooltip="Pratinjau Raport"
                           aria-label="Pratinjau Raport"
-                          className="p-1.5 px-2.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs"
+                          className="module-action border-transparent bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs"
                         >
                           <i aria-hidden="true" className="fa-solid fa-eye"></i>
                         </button>
@@ -332,9 +329,9 @@ export default function CetakRaportPage() {
                           type="button"
                           disabled={isRowLocked}
                           onClick={() => setEditing({ classId: student.studentClassId, nis: student.nis, nama: student.nama, lp: student.lp })}
-                          title="Edit Siswa"
+                          data-tooltip="Edit Siswa"
                           aria-label="Edit Siswa"
-                          className="p-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer disabled:opacity-40"
+                          data-module-action data-action-tone="info"
                         >
                           <i aria-hidden="true" className="fa-solid fa-pen"></i>
                         </button>
@@ -342,9 +339,9 @@ export default function CetakRaportPage() {
                           type="button"
                           disabled={Boolean(printJob)}
                           onClick={() => outputReport(isSuperAdmin ? 'download' : 'raport', student)}
-                          title={isSuperAdmin ? 'Unduh Raport PDF' : 'Simpan PDF'}
+                          data-tooltip={isSuperAdmin ? 'Unduh Raport PDF' : 'Simpan PDF'}
                           aria-label={isSuperAdmin ? 'Unduh Raport PDF' : 'Simpan PDF'}
-                          className="p-1.5 px-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition cursor-pointer shadow-2xs disabled:opacity-50"
+                          className="module-action border-transparent bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
                         >
                           <i aria-hidden="true" className="fa-solid fa-download"></i>
                         </button>
@@ -352,9 +349,9 @@ export default function CetakRaportPage() {
                           type="button"
                           disabled={isRowLocked}
                           onClick={() => setDeleting({ ...student, classId: student.studentClassId })}
-                          title="Hapus Siswa"
+                          data-tooltip="Hapus Siswa"
                           aria-label="Hapus Siswa"
-                          className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition cursor-pointer disabled:opacity-40"
+                          className="module-action border-transparent bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition cursor-pointer disabled:opacity-40"
                         >
                           <i aria-hidden="true" className="fa-solid fa-trash"></i>
                         </button>
@@ -375,12 +372,12 @@ export default function CetakRaportPage() {
             <button
               type="button"
               onClick={() => { changeReportStudent(deleting.classId, deleting.nis, null); setDeleting(null); }}
-              title="Konfirmasi Hapus" aria-label="Konfirmasi Hapus"
+              data-tooltip="Konfirmasi Hapus" aria-label="Konfirmasi Hapus"
               className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
             >
               <i aria-hidden="true" className="fa-solid fa-trash" />
             </button>
-            <button type="button" onClick={() => setDeleting(null)} title="Batal" aria-label="Batal"
+            <button type="button" onClick={() => setDeleting(null)} data-tooltip="Batal" aria-label="Batal"
               className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100">
               <i aria-hidden="true" className="fa-solid fa-xmark" />
             </button>
@@ -408,11 +405,10 @@ export default function CetakRaportPage() {
                 title={`Edit Siswa (${editing.nis})`}
                 description={`Kelas ${editing.classId}`}
               />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setEditing(null)}
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
-                title="Tutup Modal"
+                data-tooltip="Tutup Modal"
                 aria-label="Tutup Modal"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />

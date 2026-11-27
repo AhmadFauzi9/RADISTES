@@ -4,6 +4,7 @@ import React from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Toast from '../common/Toast';
+import FloatingTooltip from '../common/FloatingTooltip';
 import RaportPreviewModal from '../raport/RaportPreviewModal';
 import LoginScreen from '../auth/LoginScreen';
 import { useApp } from '@/context/AppContext';
@@ -27,6 +28,7 @@ export default function AppLayout({ children }) {
       <>
         <LoginScreen />
         <Toast />
+        <FloatingTooltip />
       </>
     );
   }
@@ -63,6 +65,7 @@ export default function AppLayout({ children }) {
 
       {/* Toast Notifications */}
       <Toast />
+      <FloatingTooltip />
 
       {/* Global Raport Preview & Print Modal */}
       <RaportPreviewModal />

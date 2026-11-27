@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+
+const dropdownPanel = 'absolute right-0 z-50 mt-2 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-xl';
 
 export default function Header() {
   const { 
@@ -11,11 +13,44 @@ export default function Header() {
     logout,
     isSuperAdmin,
     isWaliKelas,
-    isGuruMapelOnly,
     pendingSubmissions 
   } = useApp();
 
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const actionsRef = useRef(null);
+  const notificationButtonRef = useRef(null);
+  const accountButtonRef = useRef(null);
+  const accountName = currentUser?.nama || currentUser?.username || '';
+  const accountInitials = accountName.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
+  const avatarTone = isSuperAdmin ? 'border-purple-500/40 bg-purple-600/30 text-purple-300'
+    : isWaliKelas ? 'border-brand-500/40 bg-brand-600/30 text-brand-300'
+    : 'border-emerald-500/40 bg-emerald-600/30 text-emerald-300';
+
+  useEffect(() => {
+    if (!openDropdown) return;
+
+    function closeOutside(event) {
+      if (!actionsRef.current?.contains(event.target)) setOpenDropdown(null);
+    }
+
+    function closeWithEscape(event) {
+      if (event.key !== 'Escape') return;
+      setOpenDropdown(null);
+      const trigger = openDropdown === 'account' ? accountButtonRef : notificationButtonRef;
+      trigger.current?.focus();
+    }
+
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeWithEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeWithEscape);
+    };
+  }, [openDropdown]);
+
+  function toggleDropdown(name) {
+    setOpenDropdown(previous => previous === name ? null : name);
+  }
 
   return (
     <header className="bg-slate-900 text-white shadow-md sticky top-0 z-40">
@@ -42,17 +77,17 @@ export default function Header() {
         </Link>
 
         {/* Notifikasi, profil, dan keluar */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
-          
-
+        <div ref={actionsRef} className="relative flex shrink-0 items-center gap-2 sm:gap-3">
           {/* Notifikasi Setoran Guru Mapel */}
-          <div className="relative">
+          <div className="sm:relative">
             <button
               type="button"
-              onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-              className="relative p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none cursor-pointer"
-              title="Notifikasi Setoran Nilai Masuk"
-            aria-label="Notifikasi Setoran Nilai Masuk"
+              ref={notificationButtonRef}
+              onClick={() => toggleDropdown('notifications')}
+              className="relative cursor-pointer rounded-xl p-2 text-slate-300 transition hover:bg-slate-800 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+              data-tooltip="Notifikasi Setoran Nilai Masuk"
+              aria-label="Notifikasi Setoran Nilai Masuk"
+              aria-expanded={openDropdown === 'notifications'}
             >
               <i aria-hidden="true" className="fa-solid fa-bell text-sm sm:text-base"></i>
               {pendingSubmissions.length > 0 && (
@@ -60,8 +95,8 @@ export default function Header() {
               )}
             </button>
 
-            {showNotifDropdown && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200 text-slate-800 z-50 p-3 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+            {openDropdown === 'notifications' && (
+              <div className={`${dropdownPanel} top-full w-72 space-y-2 p-3 animate-in fade-in zoom-in-95 duration-150 sm:w-80`}>
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
                     <i className="fa-solid fa-inbox text-brand-600"></i> Setoran Nilai Masuk
@@ -89,7 +124,7 @@ export default function Header() {
                 </div>
                 <Link
                   href="/setor-nilai"
-                  onClick={() => setShowNotifDropdown(false)}
+                  onClick={() => setOpenDropdown(null)}
                   className="block text-center text-xs font-bold text-brand-600 hover:text-brand-800 pt-1"
                 >
                   Buka Portal Setor Nilai →
@@ -98,45 +133,42 @@ export default function Header() {
             )}
           </div>
 
-          {/* User Profile Info & Logout Button (Persis ExamLAN Pro) */}
           {currentUser && (
-            <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                isSuperAdmin 
-                  ? 'bg-purple-600/30 border border-purple-500/40 text-purple-300' 
-                  : isWaliKelas 
-                  ? 'bg-brand-600/30 border border-brand-500/40 text-brand-300' 
-                  : 'bg-emerald-600/30 border border-emerald-500/40 text-emerald-300'
-              }`}>
-                <i className={`fa-solid ${isSuperAdmin ? 'fa-shield-halved' : isWaliKelas ? 'fa-user-tie' : 'fa-chalkboard-user'}`}></i>
-              </div>
-              
-              <div className="leading-tight min-w-0 hidden sm:block">
-                <div className="font-bold text-xs text-white truncate max-w-[150px]">
-                  {currentUser.nama}
-                </div>
-                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-mono">
-                  <span className={`font-semibold ${
-                    isSuperAdmin ? 'text-purple-400' : isWaliKelas ? 'text-amber-400' : 'text-emerald-400'
-                  }`}>
-                    {currentUser.badge}
-                  </span>
-                </div>
-              </div>
-
-              {/* Garis pemisah kecil */}
-              <div className="h-5 w-px bg-slate-700 mx-1 hidden sm:block"></div>
-
-              {/* Tombol Logout Resmi ExamLAN Pro */}
+            <div className="relative">
               <button
+                ref={accountButtonRef}
                 type="button"
-                onClick={logout}
-                className="p-1.5 px-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-600 text-rose-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
-                title="Keluar dari akun (Logout)"
-              aria-label="Keluar dari akun (Logout)"
+                onClick={() => toggleDropdown('account')}
+                aria-label="Informasi akun"
+                aria-expanded={openDropdown === 'account'}
+                aria-controls={openDropdown === 'account' ? 'navbar-account-details' : undefined}
+                className="flex cursor-pointer items-center gap-2 rounded-xl py-1.5 pl-1.5 pr-2.5 text-xs font-semibold text-white transition hover:text-brand-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
               >
-                <i aria-hidden="true" className="fa-solid fa-right-from-bracket text-xs text-rose-400 group-hover:text-white transition-colors"></i>
+                <span aria-hidden="true" className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border font-bold ${avatarTone}`}>
+                  {accountInitials}
+                </span>
+                <span className="max-w-20 truncate sm:max-w-36">{currentUser.username || accountName}</span>
+                <i aria-hidden="true" className={`fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform ${openDropdown === 'account' ? 'rotate-180' : ''}`} />
               </button>
+
+              {openDropdown === 'account' && (
+                <div id="navbar-account-details" className={`${dropdownPanel} w-56 p-2`}>
+                  <div className="flex items-center gap-2.5 border-b border-slate-100 px-2 pb-3 pt-2">
+                    <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700">
+                      {accountInitials}
+                    </span>
+                    <div className="min-w-0 break-words leading-tight">
+                      <p className="text-xs font-bold text-slate-900">{accountName}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-600">{isSuperAdmin ? 'Admin' : currentUser.badge}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={logout} aria-label="Keluar dari akun (Logout)"
+                    className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-2 focus-visible:outline-rose-500">
+                    <i aria-hidden="true" className="fa-solid fa-right-from-bracket" />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

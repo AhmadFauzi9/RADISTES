@@ -47,7 +47,7 @@ export default function Sidebar() {
       title: 'Leger', 
       icon: 'fa-table-list', 
       path: '/leger', 
-      badge: isWaliKelas ? `Kelas ${currentUser.kelasWali}` : '',
+      badge: isWaliKelas ? currentUser.kelasWali : null,
       // Guru Mapel murni TIDAK BOLEH mengakses halaman Leger Raport!
       visible: !isGuruMapelOnly 
     },
@@ -176,7 +176,7 @@ export default function Sidebar() {
           type="button"
           onClick={logout}
           className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50 font-medium transition w-full text-left cursor-pointer"
-          title="Keluar dari Akun"
+          data-tooltip="Keluar dari Akun"
         aria-label="Keluar dari Akun"
         >
           <i aria-hidden="true" className="fa-solid fa-right-from-bracket w-4 text-center text-sm text-rose-500"></i>

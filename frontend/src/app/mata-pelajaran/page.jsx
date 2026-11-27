@@ -13,6 +13,7 @@ export default function MataPelajaranPage() {
   if (!isSuperAdmin) return <p className="module-panel text-sm text-slate-600">Menu Mata Pelajaran tersedia untuk administrator.</p>;
 
   const subjects = readSubjectCatalog(schoolSettings.subjectCatalog);
+  const activeCount = subjects.filter(isSubjectActive).length;
   const parents = new Map(subjects.map(subject => [subject.id, subject.code]));
   const hasChildren = subjects.some(subject => subject.parentId === editing?.id);
 
@@ -63,30 +64,37 @@ export default function MataPelajaranPage() {
           description="Centang induk untuk memakai satu kolom di Leger, atau centang submapel untuk memakai kolom terpisah." />
       </div>
 
-      <div className="module-panel">
-        <div className="module-table max-h-[560px] custom-scrollbar">
-          <table>
-            <thead className="sticky top-0">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+        <div className="module-table-caption flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3">
+          <h2 id="subject-table-heading" className="flex items-center gap-2">
+            <i aria-hidden="true" className="fa-solid fa-book-open text-brand-400" />
+            <span>Daftar Mata Pelajaran ({activeCount} aktif dari {subjects.length} mapel)</span>
+          </h2>
+          <p className="font-mono text-[11px] font-normal text-slate-400">Centang mapel untuk menampilkannya di Leger.</p>
+        </div>
+        <div className="max-h-[560px] overflow-x-auto custom-scrollbar">
+          <table aria-labelledby="subject-table-heading" className="module-table-compact w-full border-collapse text-left text-xs text-slate-700">
+            <thead className="sticky top-0 bg-slate-100 text-[11px] font-bold text-slate-700">
               <tr>
-                <th scope="col" className="w-12 px-3 py-2 text-center">No</th>
-                <th scope="col" className="w-24 px-3 py-2">Kode</th>
-                <th scope="col" className="w-28 whitespace-nowrap px-3 py-2">Induk Mapel</th>
-                <th scope="col" className="px-3 py-2">Mata Pelajaran</th>
-                <th scope="col" className="w-16 px-3 py-2 text-center">Urutan</th>
-                <th scope="col" className="w-28 px-3 py-2">Status</th>
-                <th scope="col" className="w-44 px-3 py-2 text-center">Aksi</th>
+                <th scope="col" className="w-12 text-center">No</th>
+                <th scope="col" className="w-24">Kode</th>
+                <th scope="col" className="w-28 whitespace-nowrap">Induk Mapel</th>
+                <th scope="col">Mata Pelajaran</th>
+                <th scope="col" className="w-16 text-center">Urutan</th>
+                <th scope="col" className="w-28">Status</th>
+                <th scope="col" className="w-44 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {!subjects.length && <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">Belum ada mata pelajaran.</td></tr>}
               {subjects.map((subject, index) => (
-                <tr key={subject.id} className="bg-white even:bg-slate-50">
-                  <td className="px-3 py-2 text-center tabular-nums">{index + 1}</td>
-                  <td className="px-3 py-2 font-mono font-bold text-brand-700">{subject.code}</td>
-                  <td className="px-3 py-2 font-mono">{parents.get(subject.parentId) ?? '–'}</td>
-                  <th scope="row" className="min-w-[190px] px-3 py-2 font-semibold">{subject.name}</th>
-                  <td className="px-3 py-2 text-center tabular-nums">{index + 1}</td>
-                  <td className="px-3 py-2">
+                <tr key={subject.id} className="border-b border-slate-200 bg-white even:bg-slate-50 hover:bg-slate-50">
+                  <td className="text-center tabular-nums">{index + 1}</td>
+                  <td className="font-mono font-bold text-brand-700">{subject.code}</td>
+                  <td className="font-mono">{parents.get(subject.parentId) ?? '–'}</td>
+                  <th scope="row" className="min-w-[190px] font-semibold">{subject.name}</th>
+                  <td className="text-center tabular-nums">{index + 1}</td>
+                  <td>
                     <label className="inline-flex items-center gap-2 whitespace-nowrap">
                       <input type="checkbox"
                         aria-label={`Aktifkan ${subject.name} di Leger`}
@@ -96,18 +104,18 @@ export default function MataPelajaranPage() {
                       {isSubjectActive(subject) ? 'Aktif' : 'Nonaktif'}
                     </label>
                   </td>
-                  <td className="px-3 py-2">
+                  <td>
                     <div className="flex items-center justify-center gap-1.5">
-                      <button data-module-action type="button" disabled={index === 0} onClick={() => moveSubject(index, -1)} title="Pindah ke atas" aria-label={`Pindah ${subject.code} ke atas`}>
+                      <button data-module-action type="button" disabled={index === 0} onClick={() => moveSubject(index, -1)} data-tooltip="Pindah ke atas" aria-label={`Pindah ${subject.code} ke atas`}>
                         <i aria-hidden="true" className="fa-solid fa-arrow-up" />
                       </button>
-                      <button data-module-action type="button" disabled={index === subjects.length - 1} onClick={() => moveSubject(index, 1)} title="Pindah ke bawah" aria-label={`Pindah ${subject.code} ke bawah`}>
+                      <button data-module-action type="button" disabled={index === subjects.length - 1} onClick={() => moveSubject(index, 1)} data-tooltip="Pindah ke bawah" aria-label={`Pindah ${subject.code} ke bawah`}>
                         <i aria-hidden="true" className="fa-solid fa-arrow-down" />
                       </button>
-                      <button data-module-action type="button" onClick={() => setEditing({ ...subject })} title="Edit mata pelajaran" aria-label={`Edit ${subject.code}`}>
+                      <button data-module-action data-action-tone="info" type="button" onClick={() => setEditing({ ...subject })} data-tooltip="Edit mata pelajaran" aria-label={`Edit ${subject.code}`}>
                         <i aria-hidden="true" className="fa-solid fa-pen" />
                       </button>
-                      <button data-module-action data-action-tone="danger" type="button" onClick={() => setDeleting(subject)} title="Hapus mata pelajaran" aria-label={`Hapus ${subject.code}`}>
+                      <button data-module-action data-action-tone="danger" type="button" onClick={() => setDeleting(subject)} data-tooltip="Hapus mata pelajaran" aria-label={`Hapus ${subject.code}`}>
                         <i aria-hidden="true" className="fa-solid fa-trash" />
                       </button>
                     </div>

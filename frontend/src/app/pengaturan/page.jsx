@@ -46,8 +46,8 @@ function WaliSettingsForm() {
             busy={isReadingImage} onBusyChange={setIsReadingImage} />
         </div>
         <div className="flex justify-end border-t border-slate-100 pt-3">
-          <button data-module-action data-action-tone="primary" type="submit" disabled={isReadingImage}
-            title="Simpan Pengaturan Wali Kelas" aria-label="Simpan Pengaturan Wali Kelas">
+          <button data-module-action data-action-variant="soft" data-action-tone="primary" type="submit" disabled={isReadingImage}
+            data-tooltip="Simpan Pengaturan Wali Kelas" aria-label="Simpan Pengaturan Wali Kelas">
             <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
           </button>
         </div>
@@ -89,22 +89,12 @@ function SchoolSettingsForm() {
         <ModuleHeading label="Konfigurasi Raport" title="Pengaturan Raport STS" description="Kelola kop surat, tahun pelajaran, dan tanda tangan raport." />
       </div>
 
-      {/* Form Pengaturan */}
-      <form onSubmit={handleSave} className="module-panel space-y-5">
-        
-        {/* Identitas Kop Surat */}
-        <div>
-          <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
+      <form onSubmit={handleSave} className="space-y-4">
+        <section aria-labelledby="kop-surat-heading" className="module-panel">
+          <h2 id="kop-surat-heading" className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-3 text-sm font-bold text-slate-800">
             <i className="fa-solid fa-school text-brand-600"></i> Kop Surat Resmi Lembaga
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <label className="space-y-1 font-semibold text-slate-700">
-              <span className="block">Deadline pengiriman nilai</span>
-              <input className="module-control" type="date" name="deadlineSetor" value={formData.deadlineSetor || ''} onChange={handleChange} />
-            </label>
-            <RaportImageInput label="Logo kop raport" value={formData.logoKop}
-              onChange={logoKop => setDraft(previous => ({ ...previous, logoKop }))}
-              busy={isReadingImage} onBusyChange={setIsReadingImage} />
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Yayasan / Naungan:</label>
               <input
@@ -165,14 +155,18 @@ function SchoolSettingsForm() {
                 className="module-control w-full"
               ></textarea>
             </div>
+            <div className="sm:col-span-2">
+              <RaportImageInput label="Logo kop raport" value={formData.logoKop}
+                onChange={logoKop => setDraft(previous => ({ ...previous, logoKop }))}
+                busy={isReadingImage} onBusyChange={setIsReadingImage} />
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Konfigurasi Raport STS */}
-        <div>
-          <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
+        <section aria-labelledby="periode-raport-heading" className="module-panel">
+          <h2 id="periode-raport-heading" className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-3 text-sm font-bold text-slate-800">
             <i className="fa-solid fa-file-lines text-brand-600"></i> Pengaturan Periode & Tanda Tangan
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Judul Dokumen Raport:</label>
@@ -206,6 +200,10 @@ function SchoolSettingsForm() {
                 <option value="GENAP">GENAP</option>
               </select>
             </div>
+            <label className="space-y-1 text-[11px] font-bold text-slate-600">
+              <span className="block">Batas Akhir Pengiriman Nilai</span>
+              <input className="module-control w-full" type="date" name="deadlineSetor" value={formData.deadlineSetor || ''} onChange={handleChange} />
+            </label>
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Tanggal Pembagian Raport:</label>
               <input
@@ -256,16 +254,14 @@ function SchoolSettingsForm() {
               onChange={ttdKepala => setDraft(previous => ({ ...previous, ttdKepala }))}
               busy={isReadingImage} onBusyChange={setIsReadingImage} />
           </div>
-        </div>
+        </section>
 
-        {/* Action Button */}
-        <div className="flex justify-end pt-3 border-t border-slate-100">
-          <button data-module-action
+        <div className="flex justify-end">
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="submit"
             disabled={isReadingImage}
-            className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer disabled:opacity-50"
-          title="Simpan Pengaturan Raport"
-          aria-label="Simpan Pengaturan Raport"
+            data-tooltip="Simpan Pengaturan Raport"
+            aria-label="Simpan Pengaturan Raport"
           >
             <i aria-hidden="true" className="fa-solid fa-floppy-disk"></i>
           </button>

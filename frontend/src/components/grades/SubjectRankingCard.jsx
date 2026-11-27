@@ -43,16 +43,16 @@ export default function SubjectRankingCard({ assignments, subjects, legerByClass
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
           <span className="text-[11px] tabular-nums text-slate-500">{activeIndex + 1} dari {count}</span>
           <div className="flex items-center gap-1">
-            <button data-module-action type="button" title="Penugasan sebelumnya" aria-label="Penugasan sebelumnya"
+            <button data-module-action data-action-variant="soft" data-action-tone="neutral" type="button" data-tooltip="Penugasan sebelumnya" aria-label="Penugasan sebelumnya"
               onClick={() => setPosition((activeIndex + count - 1) % count)}>
               <i aria-hidden="true" className="fa-solid fa-chevron-left" />
             </button>
-            <button data-module-action type="button" onClick={() => setPaused(prev => !prev)}
-              title={paused ? 'Lanjutkan pergantian otomatis' : 'Jeda pergantian otomatis'}
+            <button data-module-action data-action-variant="soft" data-action-tone="neutral" type="button" onClick={() => setPaused(prev => !prev)}
+              data-tooltip={paused ? 'Lanjutkan pergantian otomatis' : 'Jeda pergantian otomatis'}
               aria-label={paused ? 'Lanjutkan pergantian otomatis' : 'Jeda pergantian otomatis'}>
               <i aria-hidden="true" className={`fa-solid ${paused ? 'fa-play' : 'fa-pause'}`} />
             </button>
-            <button data-module-action type="button" title="Penugasan berikutnya" aria-label="Penugasan berikutnya"
+            <button data-module-action data-action-variant="soft" data-action-tone="neutral" type="button" data-tooltip="Penugasan berikutnya" aria-label="Penugasan berikutnya"
               onClick={() => setPosition((activeIndex + 1) % count)}>
               <i aria-hidden="true" className="fa-solid fa-chevron-right" />
             </button>

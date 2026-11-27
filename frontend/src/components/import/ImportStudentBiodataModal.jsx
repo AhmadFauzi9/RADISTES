@@ -45,9 +45,9 @@ export default function ImportStudentBiodataModal({ students, onImport, onClose,
           description="Perbarui tempat lahir, tanggal lahir, dan nama orang tua siswa terdaftar." />
         <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-slate-600">Template memuat siswa sesuai hasil filter pada tabel. Sel biodata kosong mempertahankan data lama.</p>
-          <button type="button" data-module-action data-action-tone="success" disabled={!students.length}
+          <button data-module-action data-action-variant="soft" data-action-tone="success" type="button" disabled={!students.length}
             onClick={() => downloadStudentBiodataTemplate(students, showToast)}
-            title="Unduh Template Biodata" aria-label="Unduh Template Biodata">
+            data-tooltip="Unduh Template Biodata" aria-label="Unduh Template Biodata">
             <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
         </div>
@@ -55,7 +55,7 @@ export default function ImportStudentBiodataModal({ students, onImport, onClose,
           <input id="student-biodata-file" type="file" className="sr-only"
             aria-label="Pilih file Excel biodata" accept=".xlsx,.xls" disabled={isReading} onChange={readFile} />
           <label htmlFor="student-biodata-file" className="block cursor-pointer space-y-2">
-            <span className="module-upload-icon mx-auto"><i aria-hidden="true" className="fa-solid fa-file-excel" /></span>
+            <span className="module-upload-icon mx-auto"><i aria-hidden="true" className="fa-solid fa-file-arrow-up" /></span>
             <span className="block break-all font-bold text-slate-800">{fileName || 'Pilih file Excel biodata'}</span>
             {isReading && <span className="block text-slate-600">Membaca file…</span>}
             {!isReading && entries.length > 0 && <span className="block text-emerald-700">{entries.length} baris siap diimpor</span>}

@@ -64,24 +64,22 @@ export default function RaportPreviewModal() {
           {/* Action Buttons: Prev, Next, Print, Close */}
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             {/* Navigasi Siswa Sebelumnya */}
-            <button data-module-action
+            <button data-module-action data-action-variant="soft" data-action-tone="neutral"
               type="button"
               disabled={!prevStudent}
               onClick={() => prevStudent && setPreviewStudent(prevStudent)}
-              className="p-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
-              title="Siswa Sebelumnya"
+              data-tooltip="Siswa Sebelumnya"
             aria-label="Siswa Sebelumnya"
             >
               <i aria-hidden="true" className="fa-solid fa-arrow-left text-[10px]"></i>
             </button>
 
             {/* Navigasi Siswa Berikutnya */}
-            <button data-module-action
+            <button data-module-action data-action-variant="soft" data-action-tone="info"
               type="button"
               disabled={!nextStudent}
               onClick={() => nextStudent && setPreviewStudent(nextStudent)}
-              className="p-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
-              title="Siswa Berikutnya"
+              data-tooltip="Siswa Berikutnya"
             aria-label="Siswa Berikutnya"
             >
               <i aria-hidden="true" className="fa-solid fa-arrow-right text-[10px]"></i>
@@ -90,22 +88,21 @@ export default function RaportPreviewModal() {
             <div className="h-5 w-px bg-slate-700 mx-1"></div>
 
             {/* Tombol Cetak / PDF */}
-            <button data-module-action
+            <button data-module-action data-action-variant="soft" data-action-tone="print"
               type="button"
               onClick={handlePrint}
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-              title="Cetak Dokumen atau Simpan sebagai PDF"
+              data-tooltip="Cetak Dokumen atau Simpan sebagai PDF"
             aria-label="Cetak Dokumen atau Simpan sebagai PDF"
             >
               <i aria-hidden="true" className="fa-solid fa-print"></i>
             </button>
 
             {/* Tombol Tutup */}
-            <button data-module-action
+            <button data-module-action data-action-variant="soft" data-action-tone="danger"
               type="button"
               onClick={closeRaportModal}
-              className="p-1.5 px-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs transition cursor-pointer ml-1"
-              title="Tutup Modal"
+              className="ml-1"
+              data-tooltip="Tutup Modal"
             aria-label="Tutup Modal"
             >
               <i aria-hidden="true" className="fa-solid fa-xmark text-sm"></i>

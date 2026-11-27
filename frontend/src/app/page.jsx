@@ -107,7 +107,7 @@ export default function DashboardPage() {
                 href="/setor-nilai"
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer"
               >
-                <i className="fa-solid fa-file-excel"></i>
+                <i className="fa-solid fa-file-arrow-up"></i>
                 <span>Setor & Import Nilai DKN Mapel</span>
               </Link>
             )}
@@ -134,10 +134,11 @@ export default function DashboardPage() {
             subtitle="Buka pengaturan raport" />
         </Link>
       </section>}
+
       {!isSuperAdmin && <section className="space-y-3">
         <h2 className="text-sm font-bold text-slate-800">Kelas yang Diampu</h2>
         {!assignments.length && <p className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Belum ada penugasan mengajar.</p>}
-        <div className={`grid gap-3 sm:grid-cols-2 ${assignments.length > 1 ? 'xl:grid-cols-3' : ''}`}>
+        <div className={`grid auto-rows-fr gap-3 sm:grid-cols-2 ${assignments.length > 1 ? 'xl:grid-cols-3' : ''}`}>
           {assignments.map(({ classId, subjectKey }) => {
             const students = legerByClass[classId] || [];
             const summary = gradeSummary(students, [subjectKey]);
@@ -148,11 +149,13 @@ export default function DashboardPage() {
               subtitle={`${students.length} siswa · Rata-rata ${summary.average} · Rentang ${summary.range}`} />;
           })}
           <SummaryCard title="Batas Akhir Pengiriman Nilai" value={deadlineLabel}
+            subtitle="Pastikan semua nilai sudah dikirim ke wali kelas."
             icon="fa-triangle-exclamation" iconColor="text-amber-700" tone="warning"
             className={assignments.length > 1 ? 'sm:row-start-1 sm:col-start-2 xl:col-start-3'
               : assignments.length === 1 ? 'sm:row-start-1 sm:col-start-2' : 'sm:col-span-2'} />
         </div>
       </section>}
+
       {isWaliKelas && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* 1. Total Siswa */}
         <SummaryCard
@@ -271,8 +274,8 @@ function ClassRankingCard({ classId, students, onPreview }) {
       <div className="flex items-center gap-2">
         <Link href="/leger" className="text-[11px] font-bold text-brand-700 hover:underline">Lihat Leger</Link>
         {students.length > 0 && (
-          <button data-module-action type="button" onClick={() => onPreview(students[0])}
-            title="Pratinjau Raport Juara 1" aria-label="Pratinjau Raport Juara 1">
+          <button data-module-action data-action-variant="soft" data-action-tone="primary" type="button" onClick={() => onPreview(students[0])}
+            data-tooltip="Pratinjau Raport Juara 1" aria-label="Pratinjau Raport Juara 1">
             <i aria-hidden="true" className="fa-solid fa-file-pdf" />
           </button>
         )}

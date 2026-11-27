@@ -1,70 +1,70 @@
-# Workflow RADISTES
+# Alur Penggunaan RADISTES
 
-Dokumen ini merekam alur yang terlihat pada frontend RADISTES, termasuk edit dan impor biodata siswa oleh Admin. Gunakan [Dokumentasi Perilaku Frontend](perilaku-frontend-radistes.md) untuk detail aturan dan contoh uji. Gunakan [Master Plan RADISTES](../master%20plan.md) untuk urutan pembangunan Go dan rencana integrasi dengan SI-MATSAMA.
+Ikuti alur ini dari persiapan data sampai cetak raport. **Rombel** adalah kelompok belajar seperti **8A**. Pilih **Kelas 8** dan **Bagian A** jika halamannya memakai dua pilihan.
 
-## Portal dan cakupan kerja
+1. **Admin** menyiapkan periode, mata pelajaran, dan penugasan.
+2. **Guru Mapel** mengisi lalu mengirim nilai ke wali kelas.
+3. **Wali Kelas** memeriksa Leger dan melengkapi data raport.
+4. **Admin atau Wali Kelas** membuka pratinjau, lalu mengunduh atau mencetak raport.
 
-| Menu | Admin | Wali Kelas | Guru Mapel |
-| --- | --- | --- | --- |
-| Dashboard | Ringkasan siswa, rombel, guru yang sudah menyelesaikan semua penugasan aktif, dan tahun aktif. | Ringkasan kelas asuh dan tiga peringkat kelas. Jika memiliki penugasan mengajar, panel kelas yang diampu ikut tampil. | Tenggat, ringkasan tiap penugasan, dan tiga nilai terbaik per mapel dan rombel. |
-| Data Siswa | Melihat lintas rombel. Dapat mengedit identitas dan biodata, serta mengimpor biodata Excel untuk siswa terdaftar. | Melihat rombel sendiri dan mengisi tempat lahir, tanggal lahir, serta nama orang tua. | — |
-| Data Master | Wali Kelas, Guru Mapel, dan Mata Pelajaran. | — | — |
-| Setor Nilai | Memantau setoran per guru, rombel, dan mapel serta mengekspor daftar status. | Mengisi dan mengirim nilai untuk penugasan mengajarnya. | Mengisi dan mengirim nilai untuk penugasan mengajarnya. |
-| Leger | Memilih rombel, memeriksa dan mengoreksi nilai, mengimpor DKN langsung, serta mengunci atau membuka Leger. | Memeriksa, mengoreksi, dan mengunci atau membuka Leger rombel asuh. | — |
-| Raport | Memfilter lintas rombel, membuka preview, mengunduh PDF langsung, dan mengekspor Leger. | Mengakses raport rombel asuh, membuka preview, mencetak atau menyimpan PDF lewat dialog cetak, dan mengekspor Leger. | — |
-| Nilai Terbaik | — | Tiga nilai mapel terbaik per penugasan mengajar. | Tiga nilai mapel terbaik per penugasan mengajar. |
-| Pengaturan | Identitas madrasah, periode, tenggat, tanggal raport, kop, dan tanda tangan kepala madrasah. | NIPY dan tanda tangan wali kelas untuk rombel asuh. | — |
+## 1. Admin menyiapkan periode dan data
 
-Sumber cakupan portal tersedia di [Sidebar](../frontend/src/components/layout/Sidebar.jsx), [Dashboard](../frontend/src/app/page.jsx), dan [AppContext](../frontend/src/context/AppContext.jsx).
+### Isi pengaturan raport
 
-## A. Siapkan periode dan data induk
+1. Buka **Pengaturan**.
+2. Isi tahun pelajaran, semester, batas akhir pengiriman nilai, tempat, dan tanggal pembagian raport.
+3. Lengkapi kop dan logo madrasah. Isi nama serta NIPY kepala madrasah, lalu unggah gambar tanda tangannya.
+4. Klik **Simpan Pengaturan Raport**.
 
-1. Admin mengisi tahun pelajaran, semester, tenggat, tanggal pembagian raport, kop, serta tanda tangan dan NIPY kepala madrasah di **Pengaturan**.
-2. Admin memeriksa siswa dan rombel di **Data Siswa**. Untuk memperbarui biodata sekaligus, buka **Impor Biodata Excel**, unduh template hasil filter, isi tempat lahir, tanggal lahir, atau nama orang tua yang perlu diperbarui, lalu unggah dan konfirmasi impor. RADISTES mencocokkan NIS dan rombel dengan siswa terdaftar. Sel biodata kosong mempertahankan isi sebelumnya. Pada frontend saat ini, tombol **Tambah Siswa** masih berupa placeholder.
-3. Admin memilih mapel aktif dan mengatur urutannya di **Mata Pelajaran**. Kolom Leger mengikuti urutan tersebut. PAI dan MULOK masing-masing mempunyai aturan pilihan antara induk atau submapel.
-4. Admin menentukan wali setiap rombel melalui **Wali Kelas**. Saat wali dipindah ke rombel yang sudah memiliki wali, UI menampilkan pertukaran penugasan. Template dan impor Excel tersedia.
-5. Admin membuat penugasan **Guru Mapel**. Satu guru dapat mengampu satu mapel di beberapa rombel atau memiliki beberapa penugasan mapel. Untuk impor, satu baris Excel mewakili satu kombinasi guru, rombel, dan mapel.
+### Perbarui biodata siswa
 
-Wali kelas dapat mulai melengkapi biodata dan tanda tangan segera setelah penugasan tersedia. Penugasan wali untuk mengurus kelas dan penugasan mengajar mapel digunakan untuk dua cakupan akses yang berbeda.
+1. Buka **Data Siswa**. Pilih kelas dan bagian atau cari nama atau NIS.
+2. Untuk satu siswa, klik ikon **Edit Siswa** di barisnya. Isi tempat lahir, tanggal lahir, dan nama orang tua, lalu klik **Simpan**. Admin juga dapat mengubah nama, jenis kelamin, dan keterangan selama Leger kelas terbuka.
+3. Untuk banyak siswa, klik **Impor Biodata Excel**, lalu **Unduh Template Biodata**. Template memuat semua siswa hasil filter, termasuk dari halaman tabel lain.
+4. Buka file Excel. Isi kolom **Tempat Lahir**, **Tanggal Lahir**, atau **Nama Orang Tua**. Pakai tanggal seperti `30/12/2012` atau `2012-12-30`. Pertahankan NIS dan rombel agar aplikasi menemukan siswa yang tepat. Sel kosong mempertahankan isian lama.
+5. Unggah file yang sudah diisi. Periksa jumlah baris yang siap diimpor, lalu klik **Impor Biodata**. Jika muncul pesan nomor baris, perbaiki baris tersebut di Excel dan unggah lagi.
 
-## B. Isi draft dan kirim nilai
+### Atur mata pelajaran dan penugasan
 
-1. Guru membuka **Setor Nilai** dan memilih **Kelas → Bagian → Mata Pelajaran** dari penugasannya. Wali kelas yang mengajar masuk melalui menu yang sama.
-2. Guru mengisi **UH 1–5** dan **STS** secara manual, memakai **Isi Nilai Cepat**, atau mengimpor DKN untuk pilihan saat ini. Impor di halaman ini mengisi draft.
-3. **Simpan Draft Nilai** menyimpan perubahan ke browser. Nilai Leger dan status **Sudah dikirim** berubah melalui aksi **Kirim Nilai ke Wali Kelas**.
-4. Saat kirim, aplikasi memeriksa kelas belum terkunci dan semua siswa mempunyai STS serta rata-rata yang valid. Nilai akhir yang masuk Leger adalah rata-rata STS dan UH yang terisi, dibulatkan ke bilangan bulat.
-5. Wali memeriksa hasilnya di Leger rombel asuh. Admin melihat perubahan status melalui menu **Setor Nilai**. Jika guru mengubah draft setelah pengiriman, status guru menjadi **Perubahan belum dikirim** sampai dikirim ulang.
+1. Buka **Data Master → Mata Pelajaran**. Centang mapel yang dipakai dan atur urutannya dengan tombol naik dan turun. Leger akan memakai mapel aktif sesuai urutan ini.
+2. Pilih antara PAI gabungan dan submapelnya. Lakukan hal yang sama untuk MULOK. Saat induk diaktifkan, submapelnya menjadi nonaktif. Saat submapel diaktifkan, induknya menjadi nonaktif.
+3. Buka **Data Master → Wali Kelas**. Edit wali, lalu pilih **Kelas** dan **Bagian** tujuan. Jika rombel tujuan sudah memiliki wali, periksa pasangan penugasan yang akan ditukar sebelum menyimpan. Gunakan template Excel jika perlu mengisi penugasan banyak rombel.
+4. Buka **Data Master → Guru Mapel**. Pilih guru dan mapelnya, lalu tentukan rombel yang diajar. Satu guru dapat memiliki beberapa penugasan. Jika memakai template Excel, isi satu baris untuk setiap kombinasi guru, rombel, dan mapel.
 
-```mermaid
-flowchart LR
-    A["Admin menyiapkan siswa, mapel, dan penugasan"] --> B["Guru memilih rombel dan mapel"]
-    B --> C["Isi manual, isi cepat, atau impor DKN"]
-    C --> D["Draft nilai"]
-    D -->|Simpan draft| D
-    D -->|Kirim| E{"Kelas terbuka dan nilai lengkap?"}
-    E -->|Perlu perbaikan| D
-    E -->|Valid| F["Leger diperbarui dan status menjadi Sudah dikirim"]
-    F -->|Edit setelah kirim| D
-    F --> G["Wali memeriksa nilai dan data pendukung"]
-    G --> H["Kunci Leger setelah verifikasi"]
-    H --> I["Preview, cetak, atau unduh raport"]
-```
+## 2. Guru mengisi dan mengirim nilai
 
-Leger dan Setor Nilai berbagi state frontend dalam aplikasi yang sama. Untuk alur lintas akun dan perangkat, Go harus menyimpan setoran dan Leger di server.
+Guru Mapel dan Wali Kelas yang memiliki penugasan mengajar menggunakan langkah yang sama.
 
-## C. Verifikasi Leger dan lengkapi raport
+1. Buka **Setor Nilai**.
+2. Pilih **Kelas → Bagian → Mata Pelajaran** dari penugasan Anda.
+3. Isi **STS** untuk setiap siswa. Isi **UH 1–5** jika tersedia. Anda dapat mengetik nilai, menggunakan **Isi Nilai Cepat** untuk kolom yang dipilih, atau mengimpor file **DKN** (Daftar Kumpulan Nilai) melalui tombol impor.
+4. Klik **Simpan Draft Nilai** jika ingin melanjutkan nanti. Draft tersimpan di browser dan Leger masih memakai nilai sebelumnya.
+5. Periksa semua siswa, termasuk halaman tabel lain. Klik **Kirim Nilai ke Wali Kelas**. RADISTES memeriksa kelengkapan nilai dan memastikan Leger kelas masih terbuka. Setelah berhasil, status menjadi **Sudah dikirim**.
+6. Jika mengoreksi draft setelah mengirim, lihat status **Perubahan belum dikirim**. Klik tombol kirim lagi agar nilai terbaru muncul di Leger.
+7. Admin dapat membuka **Setor Nilai** untuk memeriksa atau mengekspor status pengiriman berdasarkan guru, rombel, dan mapel.
 
-1. Wali kelas membuka **Leger** untuk rombelnya. Admin memilih rombel dari filter. Gunakan tab nilai untuk memeriksa mapel aktif, jumlah, rata-rata, dan peringkat.
-2. Koreksi nilai jika perlu. Nilai yang diketik di Leger dibulatkan setelah Enter atau pindah fokus. Lengkapi **Ekskul, Akhlak & Absensi**, termasuk catatan untuk orang tua.
-3. Wali kelas membuka **Data Siswa** untuk memastikan nama orang tua terisi. Nama tersebut dipakai di bagian tanda tangan **Orang Tua / Wali**.
-4. Wali kelas menyimpan NIPY serta gambar tanda tangan di **Pengaturan**. Admin mengisi bagian kepala madrasah dan kop melalui Pengaturan Admin.
-5. Setelah pemeriksaan, wali kelas atau admin dapat **Kunci Leger**. Kunci membuat input nilai dan data pendukung menjadi nonaktif di UI dan mencegah pengiriman nilai ke kelas tersebut. Kebijakan wajib lengkap sebelum kunci dan wajib terkunci sebelum terbit masih perlu diputuskan untuk Go. Frontend saat ini menampilkan petunjuk verifikasi, sementara aksi kunci dan akses cetak mempunyai perilaku tersendiri.
+## 3. Wali Kelas memeriksa nilai dan melengkapi raport
 
-## D. Preview, cetak, dan unduh
+1. Buka **Leger**. Wali Kelas langsung bekerja pada rombelnya. Jika masuk sebagai Admin, pilih rombel dari filter.
+2. Periksa nilai setiap mapel, jumlah, rata-rata, dan peringkat. Jika mengoreksi nilai desimal, tekan **Enter** atau pindah ke sel lain agar nilai dibulatkan. Admin juga dapat mengimpor DKN langsung di Leger.
+3. Buka tab **Ekskul, Akhlak & Absensi**. Isi predikat kegiatan, akhlak, kehadiran, dan catatan untuk orang tua.
+4. Buka **Data Siswa**. Klik **Edit Biodata** untuk melengkapi tempat lahir, tanggal lahir, dan nama orang tua. Nama orang tua akan muncul di bagian tanda tangan **Orang Tua / Wali**.
+5. Buka **Pengaturan**. Isi NIPY, unggah gambar tanda tangan wali kelas, lalu klik **Simpan Pengaturan Wali Kelas**.
+6. Setelah semua data diperiksa, Wali Kelas atau Admin dapat mengunci Leger. Selama terkunci, pengisian nilai dan data pendukung serta pengiriman nilai ke kelas itu akan diblokir. Buka kunci jika perlu melakukan koreksi.
 
-1. Buka **Raport**. Admin menyaring rombel atau siswa. Wali kelas masuk langsung ke rombel asuh. Tombol mata membuka preview per siswa dengan navigasi siswa sebelumnya dan berikutnya.
-2. Periksa kop, tanggal, nilai, data pendukung, dan nama orang tua. Bagian tanda tangan berurutan **Kepala Madrasah → Wali Kelas → Orang Tua / Wali**. Raport memakai format A4.
-3. Admin dapat mengunduh PDF langsung. Wali kelas dapat mencetak atau menyimpan ke PDF melalui dialog cetak. Aksi massal mengikuti seluruh hasil filter, termasuk baris di halaman lain.
-4. Gunakan **Unduh Leger Excel** untuk rekap model RDM. Halaman Raport juga memiliki aksi cetak Leger. Untuk penerbitan resmi dan arsip versi raport, ikuti rancangan di Master Plan.
+## 4. Admin atau Wali Kelas mencetak raport
 
-Sumber langkah operasional tersedia di [Setor Nilai](../frontend/src/app/setor-nilai/page.jsx), [Leger](../frontend/src/app/leger/page.jsx), [Raport](../frontend/src/app/cetak-raport/page.jsx), dan [Pengaturan](../frontend/src/app/pengaturan/page.jsx).
+1. Buka **Raport**. Admin dapat menyaring rombel atau mencari siswa. Wali Kelas langsung melihat siswa di rombelnya.
+2. Klik ikon mata **Pratinjau Raport** di baris siswa. Gunakan panah untuk berpindah ke siswa sebelumnya atau berikutnya.
+3. Periksa kop, tanggal, nilai, kehadiran, dan catatan. Pastikan tanda tangan tersusun dari **Kepala Madrasah**, **Wali Kelas**, lalu **Orang Tua / Wali**.
+4. Admin dapat memilih **Unduh Raport PDF**. Wali Kelas menggunakan dialog cetak dan dapat memilih printer atau **Save as PDF**. Raport memakai kertas **A4** dengan satu halaman per siswa.
+5. Untuk semua siswa dalam hasil filter, gunakan tombol unduh atau cetak semua di toolbar. Aksi ini mencakup siswa di halaman tabel lain.
+6. Untuk rekap nilai model RDM, pilih **Unduh Leger Excel**. Halaman **Raport** juga memiliki tombol cetak Leger.
+
+## Informasi di Dashboard dan menu Nilai Terbaik
+
+- **Admin** melihat ringkasan siswa, rombel, tahun pelajaran, dan guru yang sudah menyelesaikan semua penugasan aktif.
+- **Wali Kelas** melihat ringkasan rombel dan tiga peringkat terbaik kelas. Rincian mapel yang diajar tampil jika ada penugasan mengajar.
+- **Guru Mapel** melihat batas akhir pengiriman, ringkasan penugasan, dan tiga nilai terbaik pada setiap rombel dan mapel. Kartu nilai terbaik berganti otomatis jika ada lebih dari satu penugasan. Guru Mapel dan Wali Kelas yang mengajar juga dapat membuka menu **Nilai Terbaik**.
+
+**Catatan versi saat ini.** Biodata dan draft disimpan di browser, sedangkan nilai Leger dan status pengiriman disimpan sementara selama aplikasi berjalan. Alur lintas akun dan perangkat akan memakai penyimpanan server pada backend Go. [Cara Kerja Frontend dan Panduan Uji](perilaku-frontend-radistes.md) · [Master Plan RADISTES](../master%20plan.md)

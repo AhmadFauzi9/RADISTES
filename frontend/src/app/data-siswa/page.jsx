@@ -27,7 +27,7 @@ export default function DataSiswaPage() {
   const [levelFilter, setLevelFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [editing, setEditing] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
   const [deletingKey, setDeletingKey] = useState(null);
@@ -196,16 +196,15 @@ export default function DataSiswaPage() {
         </div>
 
         {isSuperAdmin && <div aria-label="Aksi data siswa" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
-          <button type="button" data-module-action data-action-tone="success" onClick={() => setImportOpen(true)}
-            title="Impor Biodata Excel" aria-label="Impor Biodata Excel">
-            <i aria-hidden="true" className="fa-solid fa-file-import" />
+          <button data-module-action data-action-variant="soft" data-action-tone="info" type="button" onClick={() => setImportOpen(true)}
+            data-tooltip="Impor Biodata Excel" aria-label="Impor Biodata Excel">
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="button"
             onClick={() => showToast('Fitur tambah siswa akan aktif ketika backend database terhubung!', 'info')}
-            title="Tambah Siswa"
+            data-tooltip="Tambah Siswa"
             aria-label="Tambah Siswa"
-            className="module-action border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
           >
             <i aria-hidden="true" className="fa-solid fa-plus" />
           </button>
@@ -225,18 +224,18 @@ export default function DataSiswaPage() {
         </div>
 
         <div className="overflow-x-auto custom-scrollbar max-h-[560px]">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="module-table-compact w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold border-b border-slate-300 sticky top-0 z-10">
               <tr>
-                <th className="py-2.5 px-3 text-center w-10">No</th>
-                <th className="py-2.5 px-3 w-32">NIS</th>
-                <th className="py-2.5 px-4">Nama Lengkap Siswa</th>
-                <th className="py-2.5 px-2 text-center w-14">L/P</th>
-                <th className="py-2.5 px-2 text-center w-16 bg-brand-50 text-brand-900">Kelas</th>
-                <th className="min-w-[165px] px-4 py-2.5" title="Tempat, Tanggal Lahir">TTL</th>
-                <th className="min-w-[150px] px-4 py-2.5">Nama Orang Tua</th>
-                <th className="py-2.5 px-4">Keterangan</th>
-                <th className="py-2.5 px-3 text-center w-28">Aksi</th>
+                <th className="text-center w-10">No</th>
+                <th className="w-32">NIS</th>
+                <th>Nama Lengkap Siswa</th>
+                <th className="text-center w-14">L/P</th>
+                <th className="text-center w-16 bg-brand-50 text-brand-900">Kelas</th>
+                <th className="min-w-[165px]" data-tooltip="Tempat, Tanggal Lahir">TTL</th>
+                <th className="min-w-[150px]">Nama Orang Tua</th>
+                <th>Keterangan</th>
+                <th className="text-center w-28">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -253,25 +252,25 @@ export default function DataSiswaPage() {
 
                 return (
                   <tr key={rowKey} className={`hover:bg-brand-50/40 transition text-slate-700 ${isDeleting ? 'bg-rose-50' : ''}`}>
-                    <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{startIndex + index + 1}</td>
-                    <td className="py-2 px-3 font-mono text-slate-500 text-[11px]">{student.nis}</td>
-                    <td className="py-2 px-4 font-bold text-slate-800">{student.nama}</td>
-                    <td className="py-2 px-2 text-center text-slate-500 font-mono text-[11px]">{student.lp}</td>
-                    <td className="py-2 px-2 text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">
+                    <td className="text-center font-mono font-semibold text-slate-500">{startIndex + index + 1}</td>
+                    <td className="font-mono text-slate-500 text-[11px]">{student.nis}</td>
+                    <td className="font-bold text-slate-800">{student.nama}</td>
+                    <td className="text-center text-slate-500 font-mono text-[11px]">{student.lp}</td>
+                    <td className="text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">
                       {student.studentClassId}
                     </td>
-                    <td className="px-4 py-2">{formatStudentBirth(student.biodata) || '–'}</td>
-                    <td className="px-4 py-2">{student.biodata.namaOrangTua || '–'}</td>
-                    <td className="py-2 px-4 text-slate-600 text-[11px]">
+                    <td>{formatStudentBirth(student.biodata) || '–'}</td>
+                    <td>{student.biodata.namaOrangTua || '–'}</td>
+                    <td className="text-slate-600 text-[11px]">
                       {student.keterangan || 'Aktif'}
                     </td>
-                    <td className="py-2 px-3 text-center">
+                    <td className="text-center">
                       {isDeleting ? (
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleDeleteStudent(student.studentClassId, student.nis, student.nama)}
-                            title="Konfirmasi Hapus"
+                            data-tooltip="Konfirmasi Hapus"
                             aria-label="Konfirmasi Hapus"
                             className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
                           >
@@ -280,7 +279,7 @@ export default function DataSiswaPage() {
                           <button
                             type="button"
                             onClick={() => setDeletingKey(null)}
-                            title="Batal"
+                            data-tooltip="Batal"
                             aria-label="Batal"
                             className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                           >
@@ -302,9 +301,9 @@ export default function DataSiswaPage() {
                                 biodata: { tempatLahir: '', tanggalLahir: '', namaOrangTua: '', ...student.biodata },
                               });
                             }}
-                            title={isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'}
+                            data-tooltip={isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'}
                             aria-label={isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'}
-                            className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                            data-module-action data-action-tone="info"
                           >
                             <i aria-hidden="true" className="fa-solid fa-pen" />
                           </button>
@@ -314,7 +313,7 @@ export default function DataSiswaPage() {
                               setEditing(null);
                               setDeletingKey(rowKey);
                             }}
-                            title="Hapus Siswa"
+                            data-tooltip="Hapus Siswa"
                             aria-label="Hapus Siswa"
                             className="module-action border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
                           >
@@ -351,11 +350,10 @@ export default function DataSiswaPage() {
                 title={`${isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'} (${editing.nis})`}
                 description={`${editing.nama} · Kelas ${editing.classId}`}
               />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setEditing(null)}
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
-                title="Tutup Modal"
+                data-tooltip="Tutup Modal"
                 aria-label="Tutup Modal"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />

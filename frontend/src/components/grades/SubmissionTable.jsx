@@ -15,7 +15,7 @@ export default function SubmissionTable() {
   const [classId, setClassId] = useState('');
   const [status, setStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   const availableSections = [...new Set(
     allClasses.filter(item => !levelFilter || item.tingkat === levelFilter).map(item => item.id.slice(1))
@@ -152,15 +152,14 @@ export default function SubmissionTable() {
           />
         </div>
         <div className="flex items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="success"
             type="button"
             disabled={!rows.length}
             onClick={download}
-            title="Ekspor Excel"
+            data-tooltip="Ekspor Excel"
             aria-label="Ekspor Excel"
-            className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
         </div>
       </div>

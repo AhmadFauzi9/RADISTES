@@ -36,13 +36,12 @@ export default function ModulePagination({
       </div>
 
       <div className="flex items-center gap-1">
-        <button
+        <button data-module-action data-action-variant="soft" data-action-tone="neutral"
           type="button"
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
-          title="Halaman Sebelumnya"
+          data-tooltip="Halaman Sebelumnya"
           aria-label="Halaman Sebelumnya"
-          className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <i aria-hidden="true" className="fa-solid fa-chevron-left text-[11px]" />
         </button>
@@ -73,13 +72,12 @@ export default function ModulePagination({
             )
           )}
 
-        <button
+        <button data-module-action data-action-variant="soft" data-action-tone="neutral"
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
-          title="Halaman Berikutnya"
+          data-tooltip="Halaman Berikutnya"
           aria-label="Halaman Berikutnya"
-          className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <i aria-hidden="true" className="fa-solid fa-chevron-right text-[11px]" />
         </button>

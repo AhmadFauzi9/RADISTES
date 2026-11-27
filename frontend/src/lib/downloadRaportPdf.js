@@ -17,13 +17,16 @@ export async function downloadRaportPdf(container, title) {
   const availableHeight = paperHeight - marginY * 2;
 
   for (const [index, sheet] of sheets.entries()) {
-    const canvas = await toCanvas(sheet, { pixelRatio: 2, skipFonts: true, backgroundColor: '#fff' });
-    const scale = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-    const width = canvas.width * scale;
-    if (index > 0) pdf.addPage(paperSize);
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (paperWidth - width) / 2, marginY, width, canvas.height * scale);
-    canvas.width = 0;
-    canvas.height = 0;
+    const canvas = await toCanvas(sheet, { pixelRatio: 3, skipFonts: true, backgroundColor: '#fff' });
+    try {
+      const scale = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
+      const width = canvas.width * scale;
+      if (index > 0) pdf.addPage(paperSize);
+      pdf.addImage(canvas, 'PNG', (paperWidth - width) / 2, marginY, width, canvas.height * scale);
+    } finally {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 
   const filename = title.replace(/[<>:"/\\|?*]/g, '-').trim().slice(0, 120);

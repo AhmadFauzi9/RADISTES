@@ -27,7 +27,7 @@ export default function LoginModal() {
             type="button"
             onClick={() => setIsLoginModalOpen(false)}
             className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
-          title="Tutup Modal"
+          data-tooltip="Tutup Modal"
           aria-label="Tutup Modal"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark text-lg"></i>
@@ -84,7 +84,7 @@ export default function LoginModal() {
                     <button
                       type="button"
                       className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 text-slate-700 text-[11px] font-semibold hover:bg-brand-600 hover:text-white transition"
-                    title="Masuk"
+                    data-tooltip="Masuk"
                     aria-label="Masuk"
                     >
                       <i aria-hidden="true" className="fa-solid fa-right-to-bracket" />
@@ -114,7 +114,7 @@ export default function LoginModal() {
             type="button"
             onClick={() => setIsLoginModalOpen(false)}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
-          title="Tutup"
+          data-tooltip="Tutup"
           aria-label="Tutup"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark" />

@@ -112,11 +112,10 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
         {/* Header Modal */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <ModuleHeading compact label="Impor Excel" title="Impor Penugasan Wali Kelas" description="Unggah Excel pembagian tugas wali kelas." />
-          <button data-module-action
+          <button data-module-action data-action-variant="soft" data-action-tone="neutral"
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
-          title="Tutup Modal"
+          data-tooltip="Tutup Modal"
           aria-label="Tutup Modal"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark text-lg"></i>
@@ -134,7 +133,7 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
           />
           <label htmlFor="wali-file-input" className="cursor-pointer space-y-2 block">
             <div className="module-upload-icon">
-              <i className="fa-solid fa-file-excel"></i>
+              <i className="fa-solid fa-file-arrow-up"></i>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-800">
@@ -150,14 +149,13 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
         {/* Template Link */}
         <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
           <span className="text-slate-500">Gunakan template resmi untuk menghindari kesalahan kolom:</span>
-          <button data-module-action data-action-tone="success"
+          <button data-module-action data-action-variant="soft" data-action-tone="success"
             type="button"
             onClick={handleDownloadTemplate}
-            className="text-brand-700 font-bold hover:underline cursor-pointer text-[11px]"
-          title="Unduh Template 49 Kelas"
+          data-tooltip="Unduh Template 49 Kelas"
           aria-label="Unduh Template 49 Kelas"
           >
-            <i aria-hidden="true" className="fa-solid fa-download"></i>
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down"></i>
           </button>
         </div>
 
@@ -169,20 +167,20 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
               <span className="text-[10px] text-emerald-300 font-bold">Siap Disimpan</span>
             </div>
             <div className="overflow-y-auto max-h-48 custom-scrollbar">
-              <table className="w-full text-left text-xs">
+              <table className="module-table-compact w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 text-[10.5px] border-b">
                   <tr>
-                    <th className="py-1 px-3 w-16">Kelas</th>
-                    <th className="py-1 px-4">Nama Wali Kelas</th>
-                    <th className="py-1 px-4 font-mono">No. Telpon / WA</th>
+                    <th className="w-16">Kelas</th>
+                    <th>Nama Wali Kelas</th>
+                    <th className="font-mono">No. Telpon / WA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {previewAssignments.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="py-1 px-3 font-black text-brand-700">{item.kelas}</td>
-                      <td className="py-1 px-4 font-bold text-slate-800">{item.wali}</td>
-                      <td className="py-1 px-4 font-mono text-slate-500">{item.telp}</td>
+                      <td className="font-black text-brand-700">{item.kelas}</td>
+                      <td className="font-bold text-slate-800">{item.wali}</td>
+                      <td className="font-mono text-slate-500">{item.telp}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -193,21 +191,19 @@ export default function ImportWaliKelasModal({ isOpen, onClose }) {
 
         {/* Modal Actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button data-module-action
+          <button data-module-action data-action-variant="soft" data-action-tone="neutral"
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
-          title="Batal"
+          data-tooltip="Batal"
           aria-label="Batal"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
-          <button data-module-action data-action-tone="primary"
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="button"
             disabled={previewAssignments.length === 0 || isProcessing}
             onClick={handleApply}
-            className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5"
-          title="Terapkan Penugasan Wali Kelas"
+          data-tooltip="Terapkan Penugasan Wali Kelas"
           aria-label="Terapkan Penugasan Wali Kelas"
           >
             <i aria-hidden="true" className="fa-solid fa-check"></i>

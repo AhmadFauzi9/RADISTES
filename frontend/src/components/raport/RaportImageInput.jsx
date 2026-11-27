@@ -13,21 +13,12 @@ function readDataUrl(file) {
   });
 }
 
-async function prepareImage(file, signature) {
+async function prepareImage(file) {
   const dataUrl = await readDataUrl(file);
   const image = new Image();
   image.src = dataUrl;
   await image.decode();
-  if (!signature) return dataUrl;
-
-  const ratio = Math.min(1, 480 / image.naturalWidth, 200 / image.naturalHeight);
-  if (ratio === 1) return dataUrl;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/png');
+  return dataUrl;
 }
 
 export default function RaportImageInput({ label, value, onChange, busy, onBusyChange, signature = false }) {
@@ -43,7 +34,7 @@ export default function RaportImageInput({ label, value, onChange, busy, onBusyC
     }
     onBusyChange(true);
     try {
-      onChange(await prepareImage(file, signature));
+      onChange(await prepareImage(file));
     } catch {
       showToast('Gambar gagal dibaca. Pilih ulang file gambar.', 'warning');
     } finally {

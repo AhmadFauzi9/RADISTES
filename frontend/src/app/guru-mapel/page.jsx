@@ -278,23 +278,21 @@ export default function GuruMapelPage() {
         </div>
 
         <div aria-label="Aksi penugasan guru" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="button"
             onClick={() => { setForm(empty); setIsAddModalOpen(true); }}
-            title="Tambah Penugasan Guru"
+            data-tooltip="Tambah Penugasan Guru"
             aria-label="Tambah Penugasan Guru"
-            className="module-action border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
           >
             <i aria-hidden="true" className="fa-solid fa-plus" />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="info"
             type="button"
             onClick={() => { setImportFileName(''); setImportRows([]); setIsImportModalOpen(true); }}
-            title="Impor Penugasan Excel"
+            data-tooltip="Impor Penugasan Excel"
             aria-label="Impor Penugasan Excel"
-            className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-import" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
           </button>
         </div>
       </div>
@@ -310,15 +308,15 @@ export default function GuruMapelPage() {
         </div>
 
         <div ref={tableViewportRef} className="overflow-x-auto custom-scrollbar max-h-[560px]">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="module-table-compact w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold sticky top-0 z-10 border-b border-slate-300">
               <tr>
-                <th className="py-2.5 px-3 text-center w-10">No</th>
-                <th className="py-2.5 px-3 w-24">KODE</th>
-                <th className="py-2.5 px-4">NAMA GURU</th>
-                <th className="py-2.5 px-3 text-center w-20 bg-brand-50 text-brand-900">KELAS</th>
-                <th className="py-2.5 px-4">MATA PELAJARAN</th>
-                <th className="py-2.5 px-3 text-center w-28">AKSI</th>
+                <th className="text-center w-10">No</th>
+                <th className="w-24">KODE</th>
+                <th>NAMA GURU</th>
+                <th className="text-center w-20 bg-brand-50 text-brand-900">KELAS</th>
+                <th>MATA PELAJARAN</th>
+                <th className="text-center w-28">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -337,18 +335,18 @@ export default function GuruMapelPage() {
 
                 return (
                   <tr key={rowKey} className={`hover:bg-brand-50/40 transition group text-slate-700 ${isDeleting ? 'bg-rose-50' : ''}`}>
-                    <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
-                    <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{teacher.username}</td>
-                    <td className="py-2 px-4 font-bold text-slate-800">
+                    <td className="text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
+                    <td className="font-mono text-[11px] text-slate-500">{teacher.username}</td>
+                    <td className="font-bold text-slate-800">
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-chalkboard-user text-slate-400 text-xs"></i>
                         <span>{teacher.nama}</span>
                       </div>
                     </td>
-                    <td className="py-2 px-3 text-center font-black text-brand-700 bg-brand-50/50">
+                    <td className="text-center font-black text-brand-700 bg-brand-50/50">
                       {classId || <span className="text-slate-400 font-normal">–</span>}
                     </td>
-                    <td className="py-2 px-4 text-slate-700">
+                    <td className="text-slate-700">
                       {classId ? (
                         <span className="inline-flex items-center gap-1.5">
                           <i className="fa-solid fa-book text-slate-400 text-[10px]"></i>
@@ -359,13 +357,13 @@ export default function GuruMapelPage() {
                         <span className="text-slate-400 italic text-[11px]">Belum ada penugasan</span>
                       )}
                     </td>
-                    <td className="py-2 px-3 text-center">
+                    <td className="text-center">
                       {isDeleting ? (
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleRemoveAssignment(teacher.username, classId, subjectKey)}
-                            title="Konfirmasi Hapus"
+                            data-tooltip="Konfirmasi Hapus"
                             aria-label="Konfirmasi Hapus"
                             className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
                           >
@@ -374,7 +372,7 @@ export default function GuruMapelPage() {
                           <button
                             type="button"
                             onClick={() => setDeletingKey(null)}
-                            title="Batal"
+                            data-tooltip="Batal"
                             aria-label="Batal"
                             className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                           >
@@ -397,9 +395,9 @@ export default function GuruMapelPage() {
                                   .map(assignment => assignment.classId))],
                               });
                             }}
-                            title="Edit Penugasan"
+                            data-tooltip="Edit Penugasan"
                             aria-label="Edit Penugasan"
-                            className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                            data-module-action data-action-tone="info"
                           >
                             <i aria-hidden="true" className="fa-solid fa-pen" />
                           </button>
@@ -409,7 +407,7 @@ export default function GuruMapelPage() {
                               setEditing(null);
                               setDeletingKey(rowKey);
                             }}
-                            title="Hapus Penugasan"
+                            data-tooltip="Hapus Penugasan"
                             aria-label="Hapus Penugasan"
                             className="module-action border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
                           >
@@ -448,12 +446,11 @@ export default function GuruMapelPage() {
                 title={`Edit Penugasan (${editing.teacherUsername})`}
                 description="Perbarui semua rombel untuk penugasan mapel yang dibuka."
               />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setEditing(null)}
-                title="Tutup Modal"
+                data-tooltip="Tutup Modal"
                 aria-label="Tutup Modal"
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />
               </button>
@@ -510,12 +507,11 @@ export default function GuruMapelPage() {
                 title="Tambah Penugasan Guru Mapel"
                 description="Masukkan data guru, pilih mata pelajaran, lalu centang semua rombel yang diampu."
               />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                title="Tutup Modal"
+                data-tooltip="Tutup Modal"
                 aria-label="Tutup Modal"
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />
               </button>
@@ -588,12 +584,11 @@ export default function GuruMapelPage() {
                 title="Impor Penugasan Guru Mapel"
                 description="Unggah file Excel (.xlsx) berisi daftar penugasan guru mata pelajaran."
               />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setIsImportModalOpen(false)}
-                title="Tutup Modal"
+                data-tooltip="Tutup Modal"
                 aria-label="Tutup Modal"
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />
               </button>
@@ -610,7 +605,7 @@ export default function GuruMapelPage() {
               />
               <label htmlFor="guru-mapel-excel-input" className="cursor-pointer space-y-2 block">
                 <div className="module-upload-icon">
-                  <i className="fa-solid fa-file-excel"></i>
+                  <i className="fa-solid fa-file-arrow-up"></i>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-800">
@@ -625,12 +620,11 @@ export default function GuruMapelPage() {
 
             <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
               <span className="text-slate-500">Pilih kelas dan bagian secara terpisah, lalu pilih kode mapel aktif.</span>
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="success"
                 type="button"
                 onClick={downloadTemplate}
-                title="Unduh Template Excel"
+                data-tooltip="Unduh Template Excel"
                 aria-label="Unduh Template Excel"
-                className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
               >
                 <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
               </button>
@@ -650,7 +644,7 @@ export default function GuruMapelPage() {
                 onClick={handleApplyImport}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
               >
-                <i aria-hidden="true" className="fa-solid fa-file-import" />
+                <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
                 <span>Impor Penugasan</span>
               </button>
             </div>

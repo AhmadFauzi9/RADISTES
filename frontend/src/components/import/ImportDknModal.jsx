@@ -222,11 +222,10 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
         {/* Header Modal */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <ModuleHeading compact label="Impor Excel" title="Impor Nilai DKN" description="Unggah Excel daftar nilai untuk kelas dan mata pelajaran yang dipilih." />
-          <button data-module-action
+          <button data-module-action data-action-variant="soft" data-action-tone="neutral"
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
-          title="Tutup Modal"
+          data-tooltip="Tutup Modal"
           aria-label="Tutup Modal"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark text-lg"></i>
@@ -276,7 +275,7 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
           />
           <label htmlFor="dkn-file-input" className="cursor-pointer space-y-2 block">
             <div className="module-upload-icon">
-              <i className="fa-solid fa-cloud-arrow-up"></i>
+              <i className="fa-solid fa-file-arrow-up"></i>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-800">
@@ -327,30 +326,28 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button data-module-action data-action-tone="success"
+          <button data-module-action data-action-variant="soft" data-action-tone="success"
             type="button"
             onClick={handleDownloadSample}
             className="mr-auto"
-            title="Unduh Contoh DKN"
+            data-tooltip="Unduh Contoh DKN"
             aria-label="Unduh Contoh DKN"
           >
-            <i aria-hidden="true" className="fa-solid fa-download" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
-          <button data-module-action
+          <button data-module-action data-action-variant="soft" data-action-tone="neutral"
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
-          title="Batal"
+          data-tooltip="Batal"
           aria-label="Batal"
           >
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
-          <button data-module-action data-action-tone="primary"
+          <button data-module-action data-action-variant="soft" data-action-tone="primary"
             type="button"
             disabled={parsedData.length === 0 || isProcessing}
             onClick={handleApplyImport}
-            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5"
-          title={onImport ? 'Masukkan ke Draf' : 'Terapkan ke Leger'}
+          data-tooltip={onImport ? 'Masukkan ke Draf' : 'Terapkan ke Leger'}
           aria-label={onImport ? 'Masukkan ke Draf' : 'Terapkan ke Leger'}
           >
             <i aria-hidden="true" className="fa-solid fa-check"></i>

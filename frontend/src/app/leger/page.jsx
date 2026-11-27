@@ -10,7 +10,6 @@ import ImportDknModal from '@/components/import/ImportDknModal';
 import { downloadLegerExcel } from '@/lib/legerExcel';
 import { hitungStatistikSiswa, predikatPengembanganDiri, subjectGrade } from '@/lib/masterData';
 
-const toolbarButton = 'module-action';
 
 function LegerGradeInput({ score, label, disabled, onCommit, className }) {
   const [draft, setDraft] = useState(null);
@@ -93,7 +92,7 @@ export default function LegerPage() {
             href="/setor-nilai"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition shadow-xs"
           >
-            <i className="fa-solid fa-file-excel"></i>
+            <i className="fa-solid fa-file-arrow-up"></i>
             <span>Buka Menu Setor & Import Nilai Mapel →</span>
           </Link>
         </div>
@@ -127,24 +126,10 @@ export default function LegerPage() {
   });
 
   const completeCount = currentLeger.filter(student => hitungStatistikSiswa(student.grades, allMapel).isComplete).length;
-  const isAllComplete = completeCount === currentLeger.length && currentLeger.length > 0;
 
   const top10Students = [...currentLeger]
     .sort((a, b) => (b.totalNilai || 0) - (a.totalNilai || 0))
     .slice(0, 10);
-
-  const handleSimulateFillRemaining = () => {
-    currentLeger.forEach(student => {
-      allMapel.forEach(m => {
-        const grade = subjectGrade(student.grades, m.key);
-        if (grade == null || grade === '') {
-          const randomScore = 75 + Math.floor(Math.random() * 16);
-          updateStudentGrade(student.nis, m.key, randomScore);
-        }
-      });
-    });
-    showToast('Seluruh nilai siswa yang kosong berhasil disinkronkan dari setoran guru mapel!', 'success');
-  };
 
   const handleSaveLeger = () => {
     showToast(`Data Leger Kelas ${effectiveClassId} berhasil disimpan ke sistem!`, 'success');
@@ -237,32 +222,21 @@ export default function LegerPage() {
 
         <div aria-label="Aksi leger" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
           {!isWaliKelas && (
-            <button type="button" onClick={() => setIsDknModalOpen(true)} title="Impor DKN Excel" aria-label="Impor DKN Excel"
-              className={toolbarButton + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}>
-              <i aria-hidden="true" className="fa-solid fa-file-import" />
+            <button data-module-action data-action-variant="soft" data-action-tone="info" type="button" onClick={() => setIsDknModalOpen(true)} data-tooltip="Impor DKN Excel" aria-label="Impor DKN Excel">
+              <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
             </button>
           )}
-          <button type="button" onClick={() => toggleLockClass(effectiveClassId)}
-            title={isLocked ? 'Buka kunci leger' : 'Kunci leger'} aria-label={isLocked ? 'Buka kunci leger' : 'Kunci leger'}
-            className={toolbarButton + (isLocked ? ' border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : ' border-slate-200 bg-white text-slate-600 hover:bg-slate-100')}>
+          <button data-module-action data-action-variant="soft" data-action-tone={isLocked ? 'danger' : 'neutral'} type="button" onClick={() => toggleLockClass(effectiveClassId)}
+            data-tooltip={isLocked ? 'Buka kunci leger' : 'Kunci leger'} aria-label={isLocked ? 'Buka kunci leger' : 'Kunci leger'}>
             <i aria-hidden="true" className={`fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}`} />
           </button>
-          {!isAllComplete && (
-            <button type="button" onClick={handleSimulateFillRemaining} title="Simulasi isi nilai kosong" aria-label="Simulasi isi nilai kosong"
-              className={toolbarButton + ' border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'}>
-              <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
-            </button>
-          )}
-          <button type="button" onClick={handleExportExcel} title="Ekspor leger Excel" aria-label="Ekspor leger Excel"
-            className={toolbarButton + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}>
-            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+          <button data-module-action data-action-variant="soft" data-action-tone="success" type="button" onClick={handleExportExcel} data-tooltip="Ekspor leger Excel" aria-label="Ekspor leger Excel">
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
-          <Link href="/cetak-raport" title={`Cetak raport PDF (${completeCount}/${currentLeger.length} lengkap)`} aria-label="Cetak raport PDF"
-            className={toolbarButton + ' border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100'}>
+          <Link data-module-action data-action-variant="soft" data-action-tone="print" href="/cetak-raport" data-tooltip={`Cetak raport PDF (${completeCount}/${currentLeger.length} lengkap)`} aria-label="Cetak raport PDF">
             <i aria-hidden="true" className="fa-solid fa-print" />
           </Link>
-          <button type="button" onClick={handleSaveLeger} title="Simpan leger" aria-label="Simpan leger"
-            className={toolbarButton + ' border-brand-600 bg-brand-600 text-white hover:bg-brand-700'}>
+          <button data-module-action data-action-variant="soft" data-action-tone="primary" type="button" onClick={handleSaveLeger} data-tooltip="Simpan leger" aria-label="Simpan leger">
             <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
           </button>
         </div>
@@ -293,7 +267,7 @@ export default function LegerPage() {
               className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeTab === 'nilai' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
-            title="Nilai Mata Pelajaran"
+            data-tooltip="Nilai Mata Pelajaran"
             aria-label="Nilai Mata Pelajaran"
             >
               <i aria-hidden="true" className="fa-solid fa-graduation-cap mr-1"></i> Nilai {allMapel.length} Mapel
@@ -304,7 +278,7 @@ export default function LegerPage() {
               className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeTab === 'pendukung' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
-            title="Ekskul, Akhlak & Absensi"
+            data-tooltip="Ekskul, Akhlak & Absensi"
             aria-label="Ekskul, Akhlak & Absensi"
             >
               <i aria-hidden="true" className="fa-solid fa-heart mr-1"></i> Ekskul, Akhlak & Absensi
@@ -346,7 +320,7 @@ export default function LegerPage() {
               <tr className="border-b border-slate-300 text-[10px] bg-slate-200/80">
                 {activeTab === 'nilai' ? (
                   allMapel.map(m => (
-                    <th key={m.key} scope="col" className="py-1 px-1 text-center border-r border-slate-300 min-w-[48px] max-w-[60px]" title={m.name}>
+                    <th key={m.key} scope="col" className="py-1 px-1 text-center border-r border-slate-300 min-w-[48px] max-w-[60px]" data-tooltip={m.name}>
                       <div className="flex items-center justify-center">
                         <span className="shrink-0 whitespace-nowrap font-extrabold [writing-mode:vertical-rl] rotate-180">
                           {m.short}
@@ -465,7 +439,7 @@ export default function LegerPage() {
                               type="text"
                               disabled={isLocked}
                               value={student.pengembanganDiri?.jenis || ''}
-                              title={student.pengembanganDiri?.jenis || undefined}
+                              data-tooltip={student.pengembanganDiri?.jenis || undefined}
                               onChange={(e) => updateStudentMeta(student.nis, 'pengembanganDiri', 'jenis', e.target.value)}
                               className="w-full text-xs outline-none bg-transparent"
                               placeholder="Pramuka/Banjari..."
@@ -569,7 +543,7 @@ export default function LegerPage() {
                           type="button"
                           onClick={() => openRaportModal(student)}
                           className="p-1.5 px-2.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs flex items-center justify-center gap-1 mx-auto"
-                          title="Pratinjau dan Cetak Raport"
+                          data-tooltip="Pratinjau dan Cetak Raport"
                           aria-label="Pratinjau dan Cetak Raport"
                         >
                           <i aria-hidden="true" className="fa-solid fa-print"></i>
@@ -637,7 +611,7 @@ export default function LegerPage() {
                         type="button"
                         onClick={() => openRaportModal(s)}
                         className="text-brand-600 hover:text-brand-800 text-[11px] font-bold cursor-pointer"
-                        title="Cetak Raport"
+                        data-tooltip="Cetak Raport"
                       aria-label="Cetak Raport"
                       >
                         <i aria-hidden="true" className="fa-solid fa-print"></i>

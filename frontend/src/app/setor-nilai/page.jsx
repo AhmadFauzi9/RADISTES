@@ -227,25 +227,25 @@ export default function SetorNilaiPage() {
           </select>
           <input type="number" min="0" max="100" aria-label="Isi Nilai Cepat" value={quickScoreInput} onChange={event => setQuickScoreInput(event.target.value)}
             placeholder="Isi nilai" className="module-control w-24 text-center font-mono" disabled={locked || !currentLeger.length} />
-          <button data-module-action type="button" disabled={locked || !currentLeger.length} onClick={handleQuickFill}
-            title={`Terapkan ${QUICK_FILL_COLUMNS.find(column => column.key === quickFillColumn)?.label || 'nilai'} ke Semua Siswa`}
+          <button data-module-action data-action-variant="soft" data-action-tone="warning" type="button" disabled={locked || !currentLeger.length} onClick={handleQuickFill}
+            data-tooltip={`Terapkan ${QUICK_FILL_COLUMNS.find(column => column.key === quickFillColumn)?.label || 'nilai'} ke Semua Siswa`}
             aria-label={`Terapkan ${QUICK_FILL_COLUMNS.find(column => column.key === quickFillColumn)?.label || 'nilai'} ke Semua Siswa`}>
             <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
           </button>
-          <button data-module-action data-action-tone="success" type="button" onClick={downloadTemplate} title="Unduh Template DKN" aria-label="Unduh Template DKN">
+          <button data-module-action data-action-variant="soft" data-action-tone="success" type="button" onClick={downloadTemplate} data-tooltip="Unduh Template DKN" aria-label="Unduh Template DKN">
             <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
-          <button data-module-action data-action-tone="success" type="button" disabled={locked || !currentLeger.length} onClick={() => setIsDknModalOpen(true)}
-            title="Impor Nilai DKN" aria-label="Impor Nilai DKN">
-            <i aria-hidden="true" className="fa-solid fa-file-import" />
+          <button data-module-action data-action-variant="soft" data-action-tone="info" type="button" disabled={locked || !currentLeger.length} onClick={() => setIsDknModalOpen(true)}
+            data-tooltip="Impor Nilai DKN" aria-label="Impor Nilai DKN">
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
           </button>
-          <button data-module-action data-action-tone="success" type="button"
+          <button data-module-action data-action-variant="soft" data-action-tone="primary" type="button"
             disabled={locked || !currentLeger.length || !draftReady || !hasUnsavedGrades} onClick={handleSaveDraft}
-            title="Simpan Draft Nilai" aria-label="Simpan Draft Nilai">
+            data-tooltip="Simpan Draft Nilai" aria-label="Simpan Draft Nilai">
             <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
           </button>
-          <button data-module-action data-action-tone="primary" type="button" disabled={locked || !currentLeger.length || !draftReady} onClick={handleSubmitGrades}
-            title="Kirim Nilai ke Wali Kelas" aria-label="Kirim Nilai ke Wali Kelas">
+          <button data-module-action data-action-variant="soft" data-action-tone="send" type="button" disabled={locked || !currentLeger.length || !draftReady} onClick={handleSubmitGrades}
+            data-tooltip="Kirim Nilai ke Wali Kelas" aria-label="Kirim Nilai ke Wali Kelas">
             <i aria-hidden="true" className="fa-solid fa-paper-plane" />
           </button>
         </div>

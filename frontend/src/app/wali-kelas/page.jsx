@@ -198,33 +198,30 @@ export default function WaliKelasPage() {
         </div>
 
         <div aria-label="Aksi wali kelas" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="danger"
             type="button"
             disabled={!selectedIds.length}
             onClick={() => setConfirmBulkDelete(true)}
-            title={selectedIds.length ? `Hapus Terpilih (${selectedIds.length})` : 'Pilih data untuk dihapus'}
+            data-tooltip={selectedIds.length ? `Hapus Terpilih (${selectedIds.length})` : 'Pilih data untuk dihapus'}
             aria-label="Hapus Terpilih"
-            className="module-action border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <i aria-hidden="true" className="fa-solid fa-trash" />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="success"
             type="button"
             onClick={handleExportWaliExcel}
-            title="Ekspor Excel"
+            data-tooltip="Ekspor Excel"
             aria-label="Ekspor Excel"
-            className="module-action border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-excel" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-down" />
           </button>
-          <button
+          <button data-module-action data-action-variant="soft" data-action-tone="info"
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            title="Impor Excel Wali Kelas"
+            data-tooltip="Impor Excel Wali Kelas"
             aria-label="Impor Excel Wali Kelas"
-            className="module-action border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-import" />
+            <i aria-hidden="true" className="fa-solid fa-file-arrow-up" />
           </button>
         </div>
       </div>
@@ -237,21 +234,19 @@ export default function WaliKelasPage() {
             <span>Hapus <strong>{selectedIds.length}</strong> penugasan wali kelas yang dipilih?</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
+            <button data-module-action data-action-variant="soft" data-action-tone="danger"
               type="button"
               onClick={handleDeleteSelected}
-              title="Konfirmasi Hapus Terpilih"
+              data-tooltip="Konfirmasi Hapus Terpilih"
               aria-label="Konfirmasi Hapus Terpilih"
-              className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
             >
               <i aria-hidden="true" className="fa-solid fa-trash" />
             </button>
-            <button
+            <button data-module-action data-action-variant="soft" data-action-tone="neutral"
               type="button"
               onClick={() => setConfirmBulkDelete(false)}
-              title="Batal"
+              data-tooltip="Batal"
               aria-label="Batal"
-              className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
             >
               <i aria-hidden="true" className="fa-solid fa-xmark" />
             </button>
@@ -272,10 +267,10 @@ export default function WaliKelasPage() {
         </div>
 
         <div ref={tableViewportRef} className="overflow-x-auto custom-scrollbar max-h-[560px]">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="module-table-compact w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold border-b border-slate-300 sticky top-0 z-10">
               <tr>
-                <th className="py-2.5 px-3 text-center w-10">
+                <th className="text-center w-10">
                   <input
                     type="checkbox"
                     aria-label="Pilih semua wali kelas di halaman ini"
@@ -285,11 +280,11 @@ export default function WaliKelasPage() {
                     className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
                   />
                 </th>
-                <th className="py-2.5 px-3 text-center w-10">No</th>
-                <th className="py-2.5 px-3 text-center w-20 bg-brand-50 text-brand-900">Kelas</th>
-                <th className="py-2.5 px-4">Nama Lengkap Wali Kelas</th>
-                <th className="py-2.5 px-4 font-mono">No. Telepon / WhatsApp</th>
-                <th className="py-2.5 px-3 text-center w-28">Aksi</th>
+                <th className="text-center w-10">No</th>
+                <th className="text-center w-20 bg-brand-50 text-brand-900">Kelas</th>
+                <th>Nama Lengkap Wali Kelas</th>
+                <th className="font-mono">No. Telepon / WhatsApp</th>
+                <th className="text-center w-28">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -302,7 +297,7 @@ export default function WaliKelasPage() {
                 </tr>
               ) : pageClasses.map((cls, idx) => (
                 <tr key={cls.id} className={`hover:bg-brand-50/40 transition text-slate-700 ${deletingId === cls.id ? 'bg-rose-50' : selectedIds.includes(cls.id) ? 'bg-brand-50/30' : ''}`}>
-                  <td className="py-2 px-3 text-center">
+                  <td className="text-center">
                     <input
                       type="checkbox"
                       aria-label={`Pilih kelas ${cls.nama}`}
@@ -311,22 +306,22 @@ export default function WaliKelasPage() {
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
                     />
                   </td>
-                  <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
-                  <td className="py-2 px-3 text-center font-black text-brand-700 bg-brand-50/50">{cls.nama}</td>
-                  <td className="py-2 px-4 font-bold text-slate-800">
+                  <td className="text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
+                  <td className="text-center font-black text-brand-700 bg-brand-50/50">{cls.nama}</td>
+                  <td className="font-bold text-slate-800">
                     <div className="flex items-center gap-1.5">
                       <i className="fa-solid fa-chalkboard-user text-slate-400 text-xs"></i>
                       <span>{cls.wali}</span>
                     </div>
                   </td>
-                  <td className="py-2 px-4 font-mono text-slate-600">{cls.telp}</td>
-                  <td className="py-2 px-3 text-center">
+                  <td className="font-mono text-slate-600">{cls.telp}</td>
+                  <td className="text-center">
                     {deletingId === cls.id ? (
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleDeleteWali(cls.id)}
-                          title="Konfirmasi Hapus"
+                          data-tooltip="Konfirmasi Hapus"
                           aria-label="Konfirmasi Hapus"
                           className="module-action border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-200"
                         >
@@ -335,7 +330,7 @@ export default function WaliKelasPage() {
                         <button
                           type="button"
                           onClick={() => setDeletingId(null)}
-                          title="Batal"
+                          data-tooltip="Batal"
                           aria-label="Batal"
                           className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                         >
@@ -356,8 +351,8 @@ export default function WaliKelasPage() {
                               telp: cls.telp || '',
                             });
                           }}
-                          className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-                          title="Ubah Penugasan Guru"
+                          data-module-action data-action-tone="info"
+                          data-tooltip="Ubah Penugasan Guru"
                           aria-label="Ubah Penugasan Guru"
                         >
                           <i aria-hidden="true" className="fa-solid fa-pen" />
@@ -369,7 +364,7 @@ export default function WaliKelasPage() {
                             setDeletingId(cls.id);
                           }}
                           className="module-action border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
-                          title="Hapus Penugasan"
+                          data-tooltip="Hapus Penugasan"
                           aria-label="Hapus Penugasan"
                         >
                           <i aria-hidden="true" className="fa-solid fa-trash" />
@@ -401,11 +396,10 @@ export default function WaliKelasPage() {
           <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <ModuleHeading compact label="Edit Data" title={`Edit Wali Kelas ${editingClass.id}`} />
-              <button
+              <button data-module-action data-action-variant="soft" data-action-tone="neutral"
                 type="button"
                 onClick={() => setEditingClass(null)}
-                className="module-action border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
-                title="Tutup Form"
+                data-tooltip="Tutup Form"
                 aria-label="Tutup Form"
               >
                 <i aria-hidden="true" className="fa-solid fa-xmark" />
