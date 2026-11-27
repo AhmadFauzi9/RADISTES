@@ -6,13 +6,14 @@ import ModulePagination from '@/components/common/ModulePagination';
 import TeacherAssignmentFields from '@/components/grades/TeacherAssignmentFields';
 import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { downloadExcelTemplate } from '@/lib/excelTemplate';
+import { downloadTeacherAssignmentTemplate, findAssignmentSubject, readTeacherAssignmentRows } from '@/lib/teacherAssignmentWorkbook';
+import { readSubjectCatalog } from '@/lib/subjectCatalog';
 import { useApp } from '@/context/AppContext';
 
 const empty = { kode: '', nama: '', mapel: '', classIds: [] };
 
 export default function GuruMapelPage() {
-  const { isSuperAdmin, teachersList, setTeachersList, allClasses, allMapel, showToast } = useApp();
+  const { isSuperAdmin, teachersList, setTeachersList, allClasses, allMapel, schoolSettings, showToast } = useApp();
   const [form, setForm] = useState(empty);
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -49,13 +50,15 @@ export default function GuruMapelPage() {
       const kode = String(row.kode ?? '').trim().toLowerCase();
       const nama = String(row.nama ?? '').trim();
       const classId = String(row.kelas ?? '').trim().toUpperCase();
-      const mapel = String(row.mapel ?? '').trim().toLowerCase();
-      const subject = allMapel.find(item => item.key === mapel || item.name.toLowerCase() === mapel);
+      const subject = findAssignmentSubject(allMapel, row.mapel, row.subjectCodeOnly);
       if (!kode || !nama || !allClasses.some(item => item.id === classId) || !subject) return null;
       return { kode, nama, classId, subjectKey: subject.key };
     });
-    if (!assignments.length || assignments.some(item => !item || teachersList.some(t => t.isAdmin && t.username === item?.kode))) {
-      showToast('Periksa kode guru, nama, kelas, dan mapel pada setiap baris.', 'warning');
+    const invalidIndex = assignments.findIndex(item => !item || teachersList.some(t => t.isAdmin && t.username === item?.kode));
+    if (!assignments.length || invalidIndex >= 0) {
+      const row = rows[invalidIndex];
+      const location = row?.rowNumber ? ` pada baris ${row.rowNumber}` : '';
+      showToast(`Periksa kode guru, nama, rombel, dan kode mapel aktif${location}.`, 'warning');
       return false;
     }
     setTeachersList(previous => {
@@ -119,15 +122,15 @@ export default function GuruMapelPage() {
     const file = event.target.files[0];
     event.target.value = '';
     if (!file) return;
+    setImportFileName('');
+    setImportRows([]);
     try {
-      const book = XLSX.read(await file.arrayBuffer());
-      const rows = XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]]);
-      const normalized = rows.map(row => Object.fromEntries(Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), v])));
+      const rows = readTeacherAssignmentRows(XLSX, await file.arrayBuffer());
       setImportFileName(file.name);
-      setImportRows(normalized);
-      showToast(`Berhasil membaca ${normalized.length} baris dari file Excel.`, 'info');
-    } catch {
-      showToast('File Excel tidak dapat dibaca.', 'warning');
+      setImportRows(rows);
+      showToast(rows.length ? `Berhasil membaca ${rows.length} baris dari file Excel.` : 'Lembar penugasan belum diisi.', 'info');
+    } catch (error) {
+      showToast(error.message || 'File Excel tidak dapat dibaca.', 'warning');
     }
   }
 
@@ -144,37 +147,28 @@ export default function GuruMapelPage() {
   }
 
   function downloadTemplate() {
-    const rows = [
-      ['kode', 'nama', 'kelas', 'mapel'],
-      ['budi', 'Budi Santoso, S.Pd', '8A', 'mat'],
-      ['hendra', 'Hendra Wijaya, S.Kom', '7K', 'tik'],
-    ];
-    return downloadExcelTemplate({
-      rows,
-      sheetName: 'Template',
-      fileName: 'template-penugasan-guru.xlsx',
-      widths: [18, 38, 12, 26],
-      textColumns: [0, 2, 3],
-      inputColumns: [0, 1, 2, 3],
-      filter: false,
-    }, showToast);
+    return downloadTeacherAssignmentTemplate({ classes: allClasses, subjects: allMapel, schoolSettings }, showToast);
   }
 
   const availableSections = [...new Set(
     allClasses.filter(c => !levelFilter || c.tingkat === levelFilter).map(c => c.id.slice(1))
   )];
+  const subjectCatalog = readSubjectCatalog(schoolSettings.subjectCatalog);
+  const catalogByKey = new Map(subjectCatalog.map(subject => [subject.id, subject]));
+  const activeSubjectKeys = new Set(allMapel.map(subject => subject.key));
+  const effectiveSubjectFilter = catalogByKey.has(subjectFilter) ? subjectFilter : '';
 
   const visible = teachersList
     .filter(teacher => !teacher.isAdmin && [teacher.nama, teacher.username].some(v => v.toLowerCase().includes(search.toLowerCase())))
     .flatMap(teacher => {
-      const matching = (teacher.assignments || []).filter(a =>
+      const matching = (teacher.assignments ?? []).filter(a =>
         (!levelFilter || a.classId.startsWith(levelFilter)) &&
         (!classFilter || a.classId.slice(1) === classFilter) &&
-        (!subjectFilter || a.subjectKey === subjectFilter)
+        (!effectiveSubjectFilter || a.subjectKey === effectiveSubjectFilter)
       );
       return matching.length
         ? matching.map(a => ({ ...a, teacher }))
-        : (levelFilter || classFilter || subjectFilter) ? [] : [{ teacher }];
+        : (levelFilter || classFilter || effectiveSubjectFilter) ? [] : [{ teacher }];
     });
 
   const totalGuru = new Set(visible.map(r => r.teacher.username)).size;
@@ -208,7 +202,7 @@ export default function GuruMapelPage() {
           <div>
             <span className="text-slate-400 block text-[10px]">Total Penugasan:</span>
             <span className="font-bold text-brand-700">
-              {teachersList.filter(t => !t.isAdmin).reduce((s, t) => s + (t.assignments?.length || 0), 0)} Penugasan
+              {teachersList.filter(t => !t.isAdmin).reduce((s, t) => s + (t.assignments?.length ?? 0), 0)} Penugasan
             </span>
           </div>
           <div>
@@ -258,14 +252,18 @@ export default function GuruMapelPage() {
           <select
             aria-label="Filter mata pelajaran"
             className="module-control min-w-0 max-w-full"
-            value={subjectFilter}
+            value={effectiveSubjectFilter}
             onChange={event => {
               setSubjectFilter(event.target.value);
               changePage(1);
             }}
           >
             <option value="">Semua Mapel</option>
-            {allMapel.map(subject => <option key={subject.key} value={subject.key}>{subject.name}</option>)}
+            {subjectCatalog.map(subject => (
+              <option key={subject.id} value={subject.id}>
+                {`${subject.code} · ${subject.name}${activeSubjectKeys.has(subject.id) ? '' : ' (Nonaktif)'}`}
+              </option>
+            ))}
           </select>
           
           <ModuleSearch
@@ -334,7 +332,8 @@ export default function GuruMapelPage() {
               ) : pageRows.map(({ teacher, classId, subjectKey }, idx) => {
                 const rowKey = [teacher.id, classId, subjectKey].join(':');
                 const isDeleting = deletingKey === rowKey;
-                const mapelName = allMapel.find(m => m.key === subjectKey)?.name || teacher.mapelNama || '–';
+                const mapelName = catalogByKey.get(subjectKey)?.name || subjectKey;
+                const subjectActive = activeSubjectKeys.has(subjectKey);
 
                 return (
                   <tr key={rowKey} className={`hover:bg-brand-50/40 transition group text-slate-700 ${isDeleting ? 'bg-rose-50' : ''}`}>
@@ -354,6 +353,7 @@ export default function GuruMapelPage() {
                         <span className="inline-flex items-center gap-1.5">
                           <i className="fa-solid fa-book text-slate-400 text-[10px]"></i>
                           {mapelName}
+                          {!subjectActive && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">Nonaktif</span>}
                         </span>
                       ) : (
                         <span className="text-slate-400 italic text-[11px]">Belum ada penugasan</span>
@@ -391,7 +391,7 @@ export default function GuruMapelPage() {
                                 teacherUsername: teacher.username,
                                 oldSubjectKey: subjectKey || '',
                                 nama: teacher.nama,
-                                mapel: subjectKey || '',
+                                mapel: subjectActive ? subjectKey : '',
                                 classIds: [...new Set((teacher.assignments || [])
                                   .filter(assignment => assignment.subjectKey === subjectKey && allClasses.some(c => c.id === assignment.classId))
                                   .map(assignment => assignment.classId))],
@@ -473,6 +473,9 @@ export default function GuruMapelPage() {
               </div>
 
               <TeacherAssignmentFields classes={allClasses} subjects={allMapel} value={editing} onChange={setEditing} />
+              {editing.oldSubjectKey && !activeSubjectKeys.has(editing.oldSubjectKey) && (
+                <p className="text-xs text-slate-600">Mapel penugasan ini nonaktif. Pilih mapel aktif untuk menyimpan perubahan.</p>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
@@ -484,7 +487,8 @@ export default function GuruMapelPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  disabled={!activeSubjectKeys.has(editing.mapel)}
+                  className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
                 >
                   <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
                   <span>Simpan Perubahan</span>
@@ -613,14 +617,14 @@ export default function GuruMapelPage() {
                     {importFileName ? `${importFileName} (${importRows.length} baris)` : 'Pilih file Excel penugasan guru (.xlsx)'}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Format kolom: kode | nama | kelas | mapel
+                    Kode Guru, Nama Guru, Kelas, Bagian, dan Kode Mapel
                   </p>
                 </div>
               </label>
             </div>
 
             <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-              <span className="text-slate-500">Gunakan template resmi untuk menghindari kesalahan kolom:</span>
+              <span className="text-slate-500">Pilih kelas dan bagian secara terpisah, lalu pilih kode mapel aktif.</span>
               <button
                 type="button"
                 onClick={downloadTemplate}

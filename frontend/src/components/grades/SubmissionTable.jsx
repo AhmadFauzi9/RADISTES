@@ -6,6 +6,7 @@ import ModulePagination from '@/components/common/ModulePagination';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
+import { activeTeacherAssignments } from '@/lib/teaching';
 
 export default function SubmissionTable() {
   const { allClasses, allMapel, teachersList, submissionRecords } = useApp();
@@ -20,15 +21,14 @@ export default function SubmissionTable() {
     allClasses.filter(item => !levelFilter || item.tingkat === levelFilter).map(item => item.id.slice(1))
   )];
 
-  // Tampilkan seluruh penugasan guru mapel dengan status dummy jika belum ada record setoran
+  // Tampilkan status setoran aktual untuk setiap penugasan guru mapel.
   const allRows = teachersList
     .filter(teacher => !teacher.isAdmin)
     .flatMap(teacher =>
-      (teacher.assignments || []).map((assignment, idx) => {
+      activeTeacherAssignments(teacher, allMapel).map(assignment => {
         const recordKey = [teacher.username, assignment.classId, assignment.subjectKey].join(':');
         const record = submissionRecords[recordKey];
-        const dummySent = (teacher.username.charCodeAt(0) + assignment.classId.charCodeAt(0) + idx) % 3 !== 0;
-        const isSent = record ? Boolean(record.sent) : dummySent;
+        const isSent = Boolean(record?.sent);
 
         return {
           key: recordKey,

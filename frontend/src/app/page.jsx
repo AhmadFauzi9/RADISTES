@@ -4,7 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import SummaryCard from '@/components/common/SummaryCard';
-import { gradeSummary, teachingAssignments } from '@/lib/teaching';
+import RankingCard, { RankingList } from '@/components/grades/RankingCard';
+import SubjectRankingCard from '@/components/grades/SubjectRankingCard';
+import { activeTeacherAssignments, gradeSummary, teachingAssignments } from '@/lib/teaching';
+import { hitungStatistikSiswa } from '@/lib/masterData';
 
 export default function DashboardPage() {
   const { 
@@ -27,10 +30,7 @@ export default function DashboardPage() {
 
   // Hitung metrik ringkasan kelas aktif
   const totalSiswa = currentLeger.length;
-  const siswaLengkap = currentLeger.filter(s => {
-    const grades = s.grades || {};
-    return Object.values(grades).filter(v => v !== '' && v !== null && v !== undefined).length === 17;
-  }).length;
+  const siswaLengkap = currentLeger.filter(student => hitungStatistikSiswa(student.grades, allMapel).isComplete).length;
 
   const persenLengkap = totalSiswa > 0 ? Math.round((siswaLengkap / totalSiswa) * 100) : 0;
 
@@ -43,12 +43,24 @@ export default function DashboardPage() {
   const maxScore = allAverages.length > 0 ? Math.max(...allAverages).toFixed(1) : '0';
   const minScore = allAverages.length > 0 ? Math.min(...allAverages).toFixed(1) : '0';
 
-  // Ambil Top 5 Siswa
-  const topStudents = [...currentLeger].sort((a, b) => (b.totalNilai || 0) - (a.totalNilai || 0)).slice(0, 5);
+  const topStudents = [...currentLeger]
+    .sort((a, b) => (b.totalNilai || 0) - (a.totalNilai || 0) || (b.rataRata || 0) - (a.rataRata || 0))
+    .slice(0, 3);
 
   const isClassLocked = classStatus[selectedClassId]?.isLocked;
+  const deadline = new Date(schoolSettings.deadlineSetor);
+  const deadlineLabel = schoolSettings.deadlineSetor && !Number.isNaN(deadline.getTime())
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(deadline)
+    : 'Belum ditetapkan';
+  const assignments = teachingAssignments(currentUser, allMapel);
+  const taughtSubjectNames = allMapel
+    .filter(subject => assignments.some(item => item.subjectKey === subject.key))
+    .map(subject => subject.name)
+    .join(', ');
   const roster = Object.values(legerByClass).flat();
-  const assignedTeachers = teachersList.filter(teacher => !teacher.isAdmin && teacher.assignments?.length);
+  const assignedTeachers = teachersList.filter(teacher => !teacher.isAdmin)
+    .map(teacher => ({ ...teacher, assignments: activeTeacherAssignments(teacher, allMapel) }))
+    .filter(teacher => teacher.assignments.length);
   const sentTeachers = assignedTeachers.filter(teacher => teacher.assignments.every(item =>
     submissionRecords[[teacher.username, item.classId, item.subjectKey].join(':')]?.sent
   )).length;
@@ -71,7 +83,13 @@ export default function DashboardPage() {
               Portal Raport STS {schoolSettings.semester} {schoolSettings.tahunAjaran}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300">
-              {schoolSettings.namaMadrasah} • Wali Kelas Aktif: <strong>{activeClassInfo?.wali}</strong> (Kelas {selectedClassId})
+              {schoolSettings.namaMadrasah}
+              {isGuruMapelOnly && (
+                <> • Guru Mapel: <strong>{currentUser?.nama}</strong>{taughtSubjectNames && ` (${taughtSubjectNames})`}</>
+              )}
+              {isWaliKelas && (
+                <> • Wali Kelas Aktif: <strong>{activeClassInfo?.wali}</strong> (Kelas {selectedClassId})</>
+              )}
             </p>
           </div>
 
@@ -117,24 +135,22 @@ export default function DashboardPage() {
         </Link>
       </section>}
       {!isSuperAdmin && <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-slate-800">Kelas yang Diampu</h2>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-            <i className="fa-solid fa-clock mr-1" aria-hidden="true" />
-            Tenggat setor · {schoolSettings.deadlineSetor || 'Belum ditetapkan'}
-          </span>
-        </div>
-        {!teachingAssignments(currentUser, allMapel).length && <p className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Belum ada penugasan mengajar.</p>}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {teachingAssignments(currentUser, allMapel).map(({ classId, subjectKey }) => {
-          const students = legerByClass[classId] || [];
-          const summary = gradeSummary(students, [subjectKey]);
-          return <SummaryCard key={classId + ':' + subjectKey}
-            title={`${classId} · ${allMapel.find(item => item.key === subjectKey)?.name}`}
-            value={`${summary.completion}%`} icon="fa-chalkboard-user"
-            badge={summary.ready ? 'Siap dikirim' : 'Belum lengkap'}
-            subtitle={`${students.length} siswa · Rata-rata ${summary.average} · Rentang ${summary.range}`} />;
-        })}
+        <h2 className="text-sm font-bold text-slate-800">Kelas yang Diampu</h2>
+        {!assignments.length && <p className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Belum ada penugasan mengajar.</p>}
+        <div className={`grid gap-3 sm:grid-cols-2 ${assignments.length > 1 ? 'xl:grid-cols-3' : ''}`}>
+          {assignments.map(({ classId, subjectKey }) => {
+            const students = legerByClass[classId] || [];
+            const summary = gradeSummary(students, [subjectKey]);
+            return <SummaryCard key={classId + ':' + subjectKey}
+              title={`${classId} · ${allMapel.find(item => item.key === subjectKey)?.name}`}
+              value={`${summary.completion}%`} icon="fa-chalkboard-user"
+              badge={summary.ready ? 'Siap dikirim' : 'Belum lengkap'}
+              subtitle={`${students.length} siswa · Rata-rata ${summary.average} · Rentang ${summary.range}`} />;
+          })}
+          <SummaryCard title="Batas Akhir Pengiriman Nilai" value={deadlineLabel}
+            icon="fa-triangle-exclamation" iconColor="text-amber-700" tone="warning"
+            className={assignments.length > 1 ? 'sm:row-start-1 sm:col-start-2 xl:col-start-3'
+              : assignments.length === 1 ? 'sm:row-start-1 sm:col-start-2' : 'sm:col-span-2'} />
         </div>
       </section>}
       {isWaliKelas && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -187,12 +203,7 @@ export default function DashboardPage() {
         />
       </div>}
 
-      {/* Main Grid: Alur Kerja & Peringkat 5 Besar */}
-      <div className={isWaliKelas ? 'grid grid-cols-1 gap-4 lg:grid-cols-3' : 'space-y-4'}>
-        
-        {/* Kolom Kiri & Tengah: Penjelasan Alur Aplikasi REDIS */}
-        <div className="lg:col-span-2 space-y-4">
-          
+      <div className={isWaliKelas || isGuruMapelOnly ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]' : undefined}>
           {/* Card Penjelasan Alur Kerja */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -247,72 +258,28 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
-
-        </div>
-
-        {isWaliKelas && <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                <i className="fa-solid fa-trophy text-amber-500"></i> Peringkat Terbaik {selectedClassId}
-              </h3>
-              <Link href="/leger" className="text-[11px] text-brand-600 font-bold hover:underline">
-                Lihat Semua →
-              </Link>
-            </div>
-
-            <div className="space-y-2">
-              {topStudents.map((student, idx) => {
-                const badgeColor = idx === 0 
-                  ? 'bg-amber-500 text-white ring-2 ring-amber-200' 
-                  : idx === 1 
-                  ? 'bg-slate-400 text-white ring-2 ring-slate-200' 
-                  : idx === 2 
-                  ? 'bg-amber-700 text-white ring-2 ring-amber-100' 
-                  : 'bg-slate-100 text-slate-700';
-
-                return (
-                  <div
-                    key={student.nis}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-brand-300 transition flex items-center justify-between gap-2.5"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-6 h-6 rounded-lg ${badgeColor} flex items-center justify-center font-black text-xs shrink-0 shadow-2xs`}>
-                        {idx + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-xs text-slate-800 truncate">{student.nama}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">NIS: {student.nis}</p>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="font-mono font-bold text-xs text-brand-700">{student.rataRata}</span>
-                      <p className="text-[9px] text-slate-400">Total: {student.totalNilai}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick Preview Raport Juara 1 */}
-            {topStudents.length > 0 && (
-              <button data-module-action
-                type="button"
-                onClick={() => openRaportModal(topStudents[0])}
-                className="w-full mt-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
-              title="Pratinjau Raport Juara 1"
-              aria-label="Pratinjau Raport Juara 1"
-              >
-                <i aria-hidden="true" className="fa-solid fa-file-pdf text-brand-400"></i>
-              </button>
-            )}
-          </div>
-        </div>}
-
+          {isWaliKelas && <ClassRankingCard classId={selectedClassId} students={topStudents} onPreview={openRaportModal} />}
+          {isGuruMapelOnly && <SubjectRankingCard assignments={assignments} subjects={allMapel} legerByClass={legerByClass} />}
       </div>
-
     </div>
+  );
+}
+
+function ClassRankingCard({ classId, students, onPreview }) {
+  return (
+    <RankingCard title={`3 Peringkat Terbaik · ${classId}`} actions={
+      <div className="flex items-center gap-2">
+        <Link href="/leger" className="text-[11px] font-bold text-brand-700 hover:underline">Lihat Leger</Link>
+        {students.length > 0 && (
+          <button data-module-action type="button" onClick={() => onPreview(students[0])}
+            title="Pratinjau Raport Juara 1" aria-label="Pratinjau Raport Juara 1">
+            <i aria-hidden="true" className="fa-solid fa-file-pdf" />
+          </button>
+        )}
+      </div>
+    }>
+      <RankingList students={students.map(student => ({ ...student, score: student.rataRata }))}
+        scoreTitle="Rata-rata" showTotal emptyMessage="Belum ada siswa di Leger kelas ini." />
+    </RankingCard>
   );
 }

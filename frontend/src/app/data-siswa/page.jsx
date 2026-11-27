@@ -5,12 +5,17 @@ import ModuleSearch from '@/components/common/ModuleSearch';
 import ModulePagination from '@/components/common/ModulePagination';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { formatStudentBirth, studentBiodataKey } from '@/lib/studentBiodata';
 
 export default function DataSiswaPage() {
   const {
     isSuperAdmin,
+    isWaliKelas,
+    currentUser,
     allClasses,
     legerByClass,
+    studentBiodata,
+    saveStudentBiodata,
     changeReportStudent,
     showToast
   } = useApp();
@@ -23,16 +28,16 @@ export default function DataSiswaPage() {
   const [editing, setEditing] = useState(null);
   const [deletingKey, setDeletingKey] = useState(null);
 
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin && !isWaliKelas) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-2xs text-center max-w-xl mx-auto space-y-4 my-8">
         <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-xs">
           <i className="fa-solid fa-lock"></i>
         </div>
         <div>
-          <h2 className="text-lg font-black text-slate-800">Akses Khusus Administrator</h2>
+          <h2 className="text-lg font-black text-slate-800">Akses Khusus Admin dan Wali Kelas</h2>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Menu Data Siswa hanya tersedia untuk Administrator.
+            Buka menu Data Siswa dengan akun admin atau wali kelas.
           </p>
         </div>
       </div>
@@ -43,6 +48,7 @@ export default function DataSiswaPage() {
     allClasses.filter(item => !levelFilter || item.tingkat === levelFilter).map(item => item.id.slice(1))
   )];
   const targetClasses = allClasses.filter(cls => {
+    if (isWaliKelas) return cls.id === currentUser.kelasWali;
     if (levelFilter && cls.tingkat !== levelFilter) return false;
     if (sectionFilter && cls.id.slice(1) !== sectionFilter) return false;
     return true;
@@ -51,12 +57,14 @@ export default function DataSiswaPage() {
   const allTargetStudents = targetClasses.flatMap(cls =>
     (legerByClass[cls.id] || []).map(student => ({
       ...student,
-      studentClassId: student.kelas || cls.id
+      studentClassId: cls.id,
+      biodata: studentBiodata[studentBiodataKey(cls.id, student.nis)] || {},
     }))
   );
 
   const filteredStudents = allTargetStudents.filter(student =>
-    [student.nama, student.nis, student.studentClassId, student.keterangan].join(' ').toLowerCase().includes(search.trim().toLowerCase())
+    [student.nama, student.nis, student.studentClassId, student.keterangan, student.biodata.namaOrangTua]
+      .join(' ').toLowerCase().includes(search.trim().toLowerCase())
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
@@ -64,18 +72,23 @@ export default function DataSiswaPage() {
   const startIndex = (safePage - 1) * pageSize;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
 
-  const activeClassId = levelFilter && sectionFilter ? `${levelFilter}${sectionFilter}` : '';
+  const activeClassId = isWaliKelas ? currentUser.kelasWali : levelFilter && sectionFilter ? `${levelFilter}${sectionFilter}` : '';
   const activeClassInfo = activeClassId ? allClasses.find(c => c.id === activeClassId) : null;
   const titleSuffix = activeClassId ? `Kelas ${activeClassId}` : levelFilter ? `Kelas ${levelFilter}` : sectionFilter ? `Bagian ${sectionFilter}` : 'Semua Kelas';
 
   const handleSaveEdit = (event) => {
     event.preventDefault();
-    if (!editing || !editing.nama.trim()) return;
-    changeReportStudent(editing.classId, editing.nis, {
-      nama: editing.nama.trim(),
-      lp: editing.lp,
-      keterangan: editing.keterangan.trim()
-    });
+    if (!editing) return;
+    if (isWaliKelas) {
+      if (!saveStudentBiodata(editing.classId, editing.nis, editing.biodata)) return;
+    } else {
+      if (!editing.nama.trim()) return;
+      changeReportStudent(editing.classId, editing.nis, {
+        nama: editing.nama.trim(),
+        lp: editing.lp,
+        keterangan: editing.keterangan.trim()
+      });
+    }
     setEditing(null);
     showToast('Data siswa berhasil diperbarui.', 'success');
   };
@@ -95,7 +108,7 @@ export default function DataSiswaPage() {
           title={`Data Siswa – ${titleSuffix}`}
           description={
             activeClassInfo
-              ? <>Wali Kelas: <strong>{activeClassInfo.wali}</strong> · Kelola daftar siswa kelas {sectionFilter}</>
+              ? <>Wali Kelas: <strong>{activeClassInfo.wali}</strong> · Kelola daftar siswa kelas {activeClassId}</>
               : 'Menampilkan seluruh data siswa dari semua rombel kelas.'
           }
         />
@@ -104,7 +117,7 @@ export default function DataSiswaPage() {
           <div>
             <span className="text-slate-400 block text-[10px]">Cakupan Kelas:</span>
             <span className="font-bold text-slate-800">
-              {activeClassInfo ? `${sectionFilter} • ${activeClassInfo.wali}` : `${targetClasses.length} Rombel`}
+              {activeClassInfo ? `${activeClassId} • ${activeClassInfo.wali}` : `${targetClasses.length} Rombel`}
             </span>
           </div>
           <div>
@@ -137,6 +150,7 @@ export default function DataSiswaPage() {
               <option key={size} value={size}>{size}</option>
             ))}
           </select>
+          {isSuperAdmin && <>
           <select
             aria-label="Kelas"
             value={levelFilter}
@@ -168,6 +182,7 @@ export default function DataSiswaPage() {
               </option>
             ))}
           </select>
+          </>}
           <ModuleSearch
             aria-label="Cari siswa"
             placeholder="Cari nama, NIS, atau kelas..."
@@ -176,7 +191,7 @@ export default function DataSiswaPage() {
           />
         </div>
 
-        <div aria-label="Aksi data siswa" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
+        {isSuperAdmin && <div aria-label="Aksi data siswa" className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
           <button
             type="button"
             onClick={() => showToast('Fitur tambah siswa akan aktif ketika backend database terhubung!', 'info')}
@@ -186,7 +201,7 @@ export default function DataSiswaPage() {
           >
             <i aria-hidden="true" className="fa-solid fa-plus" />
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Tabel Data Siswa */}
@@ -210,6 +225,8 @@ export default function DataSiswaPage() {
                 <th className="py-2.5 px-4">Nama Lengkap Siswa</th>
                 <th className="py-2.5 px-2 text-center w-14">L/P</th>
                 <th className="py-2.5 px-2 text-center w-16 bg-brand-50 text-brand-900">Kelas</th>
+                <th className="min-w-[165px] px-4 py-2.5" title="Tempat, Tanggal Lahir">TTL</th>
+                <th className="min-w-[150px] px-4 py-2.5">Nama Orang Tua</th>
                 <th className="py-2.5 px-4">Keterangan</th>
                 <th className="py-2.5 px-3 text-center w-28">Aksi</th>
               </tr>
@@ -217,7 +234,7 @@ export default function DataSiswaPage() {
             <tbody className="divide-y divide-slate-200">
               {paginatedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-slate-400">
+                  <td colSpan="9" className="py-8 text-center text-slate-400">
                     <i className="fa-solid fa-inbox text-2xl mb-1 block"></i>
                     Tidak ada siswa yang sesuai.
                   </td>
@@ -235,6 +252,8 @@ export default function DataSiswaPage() {
                     <td className="py-2 px-2 text-center font-black text-brand-700 bg-brand-50/50 text-[11px]">
                       {student.studentClassId}
                     </td>
+                    <td className="px-4 py-2">{formatStudentBirth(student.biodata) || '–'}</td>
+                    <td className="px-4 py-2">{student.biodata.namaOrangTua || '–'}</td>
                     <td className="py-2 px-4 text-slate-600 text-[11px]">
                       {student.keterangan || 'Aktif'}
                     </td>
@@ -271,16 +290,17 @@ export default function DataSiswaPage() {
                                 nis: student.nis,
                                 nama: student.nama,
                                 lp: student.lp,
-                                keterangan: student.keterangan || 'Aktif'
+                                keterangan: student.keterangan || 'Aktif',
+                                biodata: { tempatLahir: '', tanggalLahir: '', namaOrangTua: '', ...student.biodata },
                               });
                             }}
-                            title="Edit Siswa"
-                            aria-label="Edit Siswa"
+                            title={isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'}
+                            aria-label={isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'}
                             className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                           >
                             <i aria-hidden="true" className="fa-solid fa-pen" />
                           </button>
-                          <button
+                          {isSuperAdmin && <button
                             type="button"
                             onClick={() => {
                               setEditing(null);
@@ -291,7 +311,7 @@ export default function DataSiswaPage() {
                             className="module-action border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
                           >
                             <i aria-hidden="true" className="fa-solid fa-trash" />
-                          </button>
+                          </button>}
                         </div>
                       )}
                     </td>
@@ -320,8 +340,8 @@ export default function DataSiswaPage() {
               <ModuleHeading
                 compact
                 label="Edit Data"
-                title={`Edit Siswa (${editing.nis})`}
-                description={`Kelas ${editing.classId}`}
+                title={`${isWaliKelas ? 'Edit Biodata' : 'Edit Siswa'} (${editing.nis})`}
+                description={`${editing.nama} · Kelas ${editing.classId}`}
               />
               <button
                 type="button"
@@ -335,6 +355,25 @@ export default function DataSiswaPage() {
             </div>
 
             <form className="space-y-3 text-xs" onSubmit={handleSaveEdit}>
+              {isWaliKelas ? (
+                <>
+                  {[
+                    { key: 'tempatLahir', label: 'Tempat Lahir', type: 'text' },
+                    { key: 'tanggalLahir', label: 'Tanggal Lahir', type: 'date' },
+                    { key: 'namaOrangTua', label: 'Nama Orang Tua', type: 'text' },
+                  ].map(({ key, label, type }) => (
+                    <label key={key} className="block space-y-1 font-bold text-slate-600">
+                      <span className="text-[11px]">{label}</span>
+                      <input type={type} name={key} className="module-control w-full" value={editing.biodata[key]}
+                        onChange={event => {
+                          const value = event.target.value;
+                          setEditing(previous => ({ ...previous, biodata: { ...previous.biodata, [key]: value } }));
+                        }} />
+                    </label>
+                  ))}
+                </>
+              ) : (
+                <>
               <div className="space-y-1">
                 <label className="block text-[11px] font-bold text-slate-600">Nama Lengkap Siswa:</label>
                 <input
@@ -370,6 +409,8 @@ export default function DataSiswaPage() {
                   onChange={event => setEditing({ ...editing, keterangan: event.target.value })}
                 />
               </div>
+                </>
+              )}
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button

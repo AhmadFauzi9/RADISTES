@@ -5,23 +5,30 @@ import ModuleHeading from '@/components/common/ModuleHeading';
 import ModulePagination from '@/components/common/ModulePagination';
 import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import * as XLSX from 'xlsx';
 import { useApp } from '@/context/AppContext';
 import PrintableRaport from '@/components/raport/PrintableRaport';
-import { waitForRaportImages } from '@/lib/raportPrint';
+import RaportMetadata from '@/components/raport/RaportMetadata';
+import { prepareRaportPrint } from '@/lib/raportPrint';
+import { downloadLegerExcel } from '@/lib/legerExcel';
+import { subjectGrade } from '@/lib/masterData';
+import { studentBiodataKey } from '@/lib/studentBiodata';
 
 export default function CetakRaportPage() {
   const {
     currentUser,
+    isSuperAdmin,
     isWaliKelas,
     isGuruMapelOnly,
     schoolSettings,
+    waliReportSettings,
     allClasses,
     allMapel,
     legerByClass,
+    studentBiodata,
     classStatus,
     changeReportStudent,
-    openRaportModal
+    openRaportModal,
+    showToast
   } = useApp();
 
   const [levelFilter, setLevelFilter] = useState(isWaliKelas ? currentUser?.kelasWali?.slice(0, 1) || '' : '');
@@ -33,6 +40,7 @@ export default function CetakRaportPage() {
   const printRaportRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const isDownloading = printJob?.kind === 'download';
 
   if (isGuruMapelOnly) {
     return (
@@ -84,37 +92,49 @@ export default function CetakRaportPage() {
   const locked = activeClassId ? classStatus[activeClassId]?.isLocked : false;
   const titleSuffix = activeClassId ? `Kelas ${activeClassId}` : effectiveLevel ? `Kelas ${effectiveLevel}` : effectiveSection ? `Bagian ${effectiveSection}` : 'Semua Kelas';
 
-  const headers = ['No Induk', 'Nama Lengkap', 'Kelas', ...allMapel.map(item => item.name), 'Jumlah Nilai', 'Peringkat'];
   const gradeRows = filtered.map(student => [
     student.nis, student.nama, student.studentClassId,
-    ...allMapel.map(item => student.grades?.[item.key] ?? ''),
+    ...allMapel.map(item => subjectGrade(student.grades, item.key) ?? ''),
     student.totalNilai ?? '',
     student.ranking ?? ''
   ]);
 
-  async function print(kind, student) {
-    if (printJob) return;
+  async function outputReport(kind, student) {
+    if (printJob || (kind === 'download' && !isSuperAdmin)) return;
     flushSync(() => setPrintJob({ kind, students: student ? [student] : filtered }));
     try {
-      if (kind === 'raport' && schoolSettings.logoKop) {
+      if (kind === 'download') {
         const printArea = printRaportRef.current;
-        await waitForRaportImages(printArea);
+        const { downloadRaportPdf } = await import('@/lib/downloadRaportPdf');
+        if (!printArea || printRaportRef.current !== printArea) return;
+        const reportTitle = student ? `${student.studentClassId} - ${student.nis} - ${student.nama}` : titleSuffix;
+        await downloadRaportPdf(printArea, `Raport STS - ${reportTitle}`);
+        return;
+      }
+      if (kind === 'raport') {
+        const printArea = printRaportRef.current;
+        await prepareRaportPrint(printArea);
         if (!printArea || printRaportRef.current !== printArea) return;
       }
       window.print();
+    } catch (error) {
+      console.error(error);
+      showToast('Raport gagal diproses. Coba lagi.', 'warning');
     } finally {
       setPrintJob(null);
     }
   }
 
   function downloadLeger() {
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, ...gradeRows]), 'Leger');
-    XLSX.writeFile(workbook, `Leger-${effectiveSection || effectiveLevel || 'Semua-Kelas'}.xlsx`);
+    const groups = targetClasses.map(cls => ({
+      classId: cls.id,
+      students: filtered.filter(student => student.studentClassId === cls.id),
+    })).filter(group => group.students.length);
+    return downloadLegerExcel({ groups, subjects: allMapel, schoolSettings }, showToast);
   }
 
   return (
-    <div className="space-y-4">
+    <div className="raport-print-page space-y-4">
 
       {/* Header */}
       <div className="module-panel space-y-3">
@@ -128,27 +148,11 @@ export default function CetakRaportPage() {
           }
         />
 
-        {/* Metadata Info */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-xl text-xs">
-          <div>
-            <span className="text-slate-400 block text-[10px]">Cakupan Kelas:</span>
-            <span className="font-bold text-slate-800">
-              {activeClassInfo ? `${effectiveSection} • ${activeClassInfo.wali}` : `${targetClasses.length} Rombel`}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px]">Tahun Pelajaran:</span>
-            <span className="font-bold text-slate-800">{schoolSettings.tahunAjaran}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px]">Ujian / Semester:</span>
-            <span className="font-bold text-brand-700">{schoolSettings.ujian} {schoolSettings.semester}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px]">Tgl Pembagian Raport:</span>
-            <span className="font-bold text-slate-800">{schoolSettings.tglRaport}</span>
-          </div>
-        </div>
+        <RaportMetadata
+          schoolSettings={schoolSettings}
+          classLabel={activeClassInfo ? 'Kelas & Wali Kelas' : 'Cakupan Kelas'}
+          classValue={activeClassInfo ? `${activeClassId} • ${activeClassInfo.wali || 'Belum ada wali kelas'}` : `${targetClasses.length} Rombel`}
+        />
       </div>
 
       {/* Toolbar */}
@@ -210,13 +214,13 @@ export default function CetakRaportPage() {
         <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 md:shrink-0 md:border-l md:border-t-0 md:pl-3 md:pt-0">
           <button
             type="button"
-            disabled={!filtered.length}
-            onClick={() => print('raport')}
-            title="Cetak Semua Raport (PDF)"
-            aria-label="Cetak Semua Raport (PDF)"
+            disabled={!filtered.length || Boolean(printJob)}
+            onClick={() => outputReport(isSuperAdmin ? 'download' : 'raport')}
+            title={isSuperAdmin ? 'Unduh Semua Raport PDF' : 'Cetak Semua Raport (PDF)'}
+            aria-label={isSuperAdmin ? 'Unduh Semua Raport PDF' : 'Cetak Semua Raport (PDF)'}
             className="module-action border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
           >
-            <i aria-hidden="true" className="fa-solid fa-file-pdf" />
+            <i aria-hidden="true" className={`fa-solid ${isDownloading ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`} />
           </button>
           <button
             type="button"
@@ -231,7 +235,7 @@ export default function CetakRaportPage() {
           <button
             type="button"
             disabled={!filtered.length}
-            onClick={() => print('leger')}
+            onClick={() => outputReport('leger')}
             title="Cetak Leger (PDF)"
             aria-label="Cetak Leger (PDF)"
             className="module-action border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50"
@@ -336,10 +340,11 @@ export default function CetakRaportPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => print('raport', student)}
-                          title="Simpan PDF"
-                          aria-label="Simpan PDF"
-                          className="p-1.5 px-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition cursor-pointer shadow-2xs"
+                          disabled={Boolean(printJob)}
+                          onClick={() => outputReport(isSuperAdmin ? 'download' : 'raport', student)}
+                          title={isSuperAdmin ? 'Unduh Raport PDF' : 'Simpan PDF'}
+                          aria-label={isSuperAdmin ? 'Unduh Raport PDF' : 'Simpan PDF'}
+                          className="p-1.5 px-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition cursor-pointer shadow-2xs disabled:opacity-50"
                         >
                           <i aria-hidden="true" className="fa-solid fa-download"></i>
                         </button>
@@ -470,14 +475,17 @@ export default function CetakRaportPage() {
       )}
 
       {/* Print Output: Raport */}
-      {printJob?.kind === 'raport' && (
-        <div ref={printRaportRef} className="hidden print-only">
+      {(printJob?.kind === 'raport' || isDownloading) && (
+        <div ref={printRaportRef} className={isDownloading ? 'raport-export' : 'raport-print-job hidden print-only'} aria-hidden={isDownloading || undefined}>
           {printJob.students.map((student, index) => (
             <div key={`${student.studentClassId}-${student.nis}`} className={index < printJob.students.length - 1 ? 'print-page-break' : undefined}>
               <PrintableRaport
                 student={student}
+                subjects={allMapel}
                 classInfo={student.classInfo || activeClassInfo}
+                parentName={studentBiodata[studentBiodataKey(student.classInfo?.id ?? student.studentClassId, student.nis)]?.namaOrangTua}
                 schoolSettings={schoolSettings}
+                waliReportSettings={waliReportSettings}
                 totalStudents={(legerByClass[student.studentClassId] || []).length}
               />
             </div>

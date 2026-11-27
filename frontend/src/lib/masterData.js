@@ -18,27 +18,58 @@ export const SCHOOL_INFO = {
   titimangsa: "Blokagung",
   kepalaMadrasah: "AHMADI, M.Pd.I",
   nipKepala: "-",
+  nipyKepala: "",
 };
 
 export const MATA_PELAJARAN = [
-  { key: 'qurdist', code: '1.a', name: "Al-Qur'an Hadits", short: 'QURDIST', group: 'Pendidikan Agama', kkm: 70 },
-  { key: 'aqidah', code: '1.b', name: "Akidah Akhlak", short: 'AQIDAH', group: 'Pendidikan Agama', kkm: 70 },
-  { key: 'fiqih', code: '1.c', name: "Fikih", short: 'FIQIH', group: 'Pendidikan Agama', kkm: 70 },
-  { key: 'ski', code: '1.d', name: "Sejarah Kebudayaan Islam", short: 'SKI', group: 'Pendidikan Agama', kkm: 70 },
-  { key: 'pkn', code: '2', name: "Pendidikan Kewarganegaraan", short: 'PKn', group: 'Umum', kkm: 70 },
-  { key: 'bindo', code: '3', name: "Bahasa Indonesia", short: 'B. INDONESIA', group: 'Umum', kkm: 70 },
-  { key: 'barab', code: '4', name: "Bahasa Arab", short: 'BHS. ARAB', group: 'Umum', kkm: 70 },
-  { key: 'bing', code: '5', name: "Bahasa Inggris", short: 'B. INGGRIS', group: 'Umum', kkm: 70 },
-  { key: 'mat', code: '6', name: "Matematika", short: 'MATEMATIKA', group: 'Umum', kkm: 70 },
-  { key: 'ipa', code: '7', name: "Ilmu Pengetahuan Alam", short: 'IPA', group: 'Umum', kkm: 70 },
-  { key: 'ips', code: '8', name: "Ilmu Pengetahuan Sosial", short: 'IPS', group: 'Umum', kkm: 70 },
-  { key: 'seni', code: '9', name: "Seni Budaya / Prakarya", short: 'SENI BUDAYA', group: 'Umum', kkm: 70 },
-  { key: 'penjas', code: '10', name: "Pendidikan Jasmani, Olahraga, dan Kesehatan", short: 'PENJASKES', group: 'Umum', kkm: 70 },
-  { key: 'ketrampilan', code: '11.a', name: "Pilihan: Seni Budaya / Prakarya", short: 'KETRAMPILAN', group: 'Pilihan', kkm: 70 },
-  { key: 'tik', code: '11.b', name: "Teknologi Informasi dan Komunikasi / Informatika", short: 'TIK', group: 'Pilihan', kkm: 70 },
-  { key: 'bdaerah', code: '12.a', name: "Mulok: Bahasa Daerah", short: 'B. DAERAH', group: 'Mulok', kkm: 70 },
-  { key: 'kenuan', code: '12.b', name: "Mulok: Ke-NU-an", short: 'KE-NU-AN', group: 'Mulok', kkm: 70 },
+  { key: 'pai', code: '1', name: 'Pendidikan Agama Islam', short: 'PAI', group: 'Pendidikan Agama', kkm: 70 },
+  { key: 'barab', code: '2', name: "Bahasa Arab", short: 'BAR', group: 'Umum', kkm: 70 },
+  { key: 'pkn', code: '3', name: "Pendidikan Kewarganegaraan", short: 'PP', group: 'Umum', kkm: 70 },
+  { key: 'bindo', code: '4', name: "Bahasa Indonesia", short: 'BINDO', group: 'Umum', kkm: 70 },
+  { key: 'mat', code: '5', name: "Matematika", short: 'MTK', group: 'Umum', kkm: 70 },
+  { key: 'ipa', code: '6', name: "Ilmu Pengetahuan Alam", short: 'IPA', group: 'Umum', kkm: 70 },
+  { key: 'ips', code: '7', name: "Ilmu Pengetahuan Sosial", short: 'IPS', group: 'Umum', kkm: 70 },
+  { key: 'bing', code: '8', name: "Bahasa Inggris", short: 'BING', group: 'Umum', kkm: 70 },
+  { key: 'penjas', code: '9', name: "Pendidikan Jasmani, Olahraga, dan Kesehatan", short: 'PJOK', group: 'Umum', kkm: 70 },
+  { key: 'tik', code: '10', name: "Teknologi Informasi dan Komunikasi / Informatika", short: 'INFO', group: 'Pilihan', kkm: 70 },
+  { key: 'seni', code: '11', name: "Seni Budaya / Prakarya", short: 'SBP', group: 'Umum', kkm: 70 },
+  { key: 'bdaerah', code: '12.a', name: "Mulok: Bahasa Daerah", short: 'BD', group: 'Mulok', kkm: 70 },
+  { key: 'kenuan', code: '12.b', name: "Mulok: Ke-NU-an", short: 'NU', group: 'Mulok', kkm: 70 },
 ];
+
+const LEGACY_PAI_KEYS = ['qurdist', 'aqidah', 'fiqih', 'ski'];
+const LEGACY_PAI_LABELS = new Set([
+  ...LEGACY_PAI_KEYS, 'qh', 'aa', 'fik', "al-qur'an hadits", 'akidah akhlak', 'fikih',
+  'sejarah kebudayaan islam', 'pendidikan agama',
+]);
+
+export function predikatPengembanganDiri(value) {
+  return String(value ?? '').trim().toUpperCase().match(/^([A-Z][+-]?)(?=$|\s|\()/)?.[1] ?? '';
+}
+
+export function findSubject(subjects, value) {
+  const label = String(value ?? '').trim().toLowerCase();
+  const matches = subject => [subject.key, subject.short, subject.name].some(alias => alias?.toLowerCase() === label);
+  const subject = subjects.find(matches);
+  if (subject) return subject;
+  const oldKey = MATA_PELAJARAN.find(matches)?.key ?? (LEGACY_PAI_LABELS.has(label) ? 'pai' : undefined);
+  return subjects.find(item => item.key === oldKey);
+}
+
+export function roundLegerGrade(value) {
+  if (value == null || String(value).trim() === '') return '';
+  const grade = Number(String(value).replace(',', '.'));
+  return Number.isFinite(grade) ? Math.round(grade) : '';
+}
+
+export function subjectGrade(grades, key) {
+  if (!grades || key !== 'pai' || Object.hasOwn(grades, 'pai')) return roundLegerGrade(grades?.[key]);
+  const scores = LEGACY_PAI_KEYS.map(legacyKey => grades[legacyKey])
+    .filter(value => value != null && String(value).trim() !== '')
+    .map(value => Number(String(value).replace(',', '.')))
+    .filter(value => Number.isFinite(value) && value >= 0 && value <= 100);
+  return scores.length ? Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length) : '';
+}
 
 export const DAFTAR_KELAS = [
   // Kelas 7 (7A - 7P)
@@ -115,7 +146,7 @@ export const DAFTAR_GURU_SEKOLAH = [
   { id: 'g_budi', username: 'budi', nama: 'Budi Santoso, S.Pd', telp: '081233445566', mapelNama: 'Matematika' },
   { id: 'g_hendra', username: 'hendra', nama: 'Hendra Wijaya, S.Kom', telp: '085677889900', mapelNama: 'Informatika / TIK' },
   { id: 'g_aminah', username: 'aminah', nama: 'Siti Aminah, S.Pd', telp: '082199887766', mapelNama: 'Ilmu Pengetahuan Alam' },
-  { id: 'g_fauzan', username: 'fauzan', nama: 'Ahmad Fauzan, M.Pd.I', telp: '085711223344', mapelNama: 'Fikih' },
+  { id: 'g_fauzan', username: 'fauzan', nama: 'Ahmad Fauzan, M.Pd.I', telp: '085711223344', mapelNama: 'Pendidikan Agama Islam' },
   { id: 'g_agus', username: 'agus', nama: 'Agus Setiawan, S.Pd', telp: '081344556677', mapelNama: 'PJOK / Penjas' },
 
   // 4. Guru-guru lainnya dari 49 kelas
@@ -129,26 +160,26 @@ export const DAFTAR_GURU_SEKOLAH = [
 ];
 
 // Helper kalkulasi jumlah, rerata, dan ranking
-export function hitungStatistikSiswa(grades) {
+export function hitungStatistikSiswa(grades, subjects = MATA_PELAJARAN) {
   let total = 0;
   let countFilled = 0;
   
-  MATA_PELAJARAN.forEach(m => {
-    const val = grades[m.key];
-    if (val !== null && val !== undefined && val !== '' && !isNaN(Number(val))) {
-      total += Number(val);
+  subjects.forEach(m => {
+    const val = subjectGrade(grades, m.key);
+    if (val !== '') {
+      total += val;
       countFilled++;
     }
   });
 
-  const avg = countFilled > 0 ? (total / MATA_PELAJARAN.length) : 0;
-  const isComplete = countFilled === MATA_PELAJARAN.length;
+  const avg = countFilled > 0 ? (total / subjects.length) : 0;
+  const isComplete = subjects.length > 0 && countFilled === subjects.length;
 
   return {
     total,
-    avg: Number(avg.toFixed(1)),
+    avg: Math.round(avg),
     countFilled,
-    totalMapel: MATA_PELAJARAN.length,
+    totalMapel: subjects.length,
     isComplete
   };
 }
@@ -214,13 +245,16 @@ export const INITIAL_STUDENTS_7K = [
   { no: 24, nis: "240724", nama: "ZAHIRA ADDINA KAMILA", lp: "P", initScore: 70.0 },
 ];
 
+// Urutan awal pembentukan nilai demo, agar perubahan urutan tampilan tidak menggeser nilai.
+const DEMO_GRADE_ORDER = ['pai', 'pkn', 'bindo', 'barab', 'bing', 'mat', 'ipa', 'ips', 'seni', 'penjas', 'tik', 'bdaerah', 'kenuan'];
+
 export function generateInitialLegerData(classId = '8A') {
   if (classId === '7K') {
     const list = INITIAL_STUDENTS_7K.map((s, idx) => {
       const grades = {};
       MATA_PELAJARAN.forEach((m) => {
         if (m.key === 'tik') {
-          grades[m.key] = s.initScore;
+          grades[m.key] = roundLegerGrade(s.initScore);
         } else {
           grades[m.key] = 72 + ((idx * 4) % 18);
         }
@@ -237,7 +271,7 @@ export function generateInitialLegerData(classId = '8A') {
         ranking: 1,
         pengembanganDiri: {
           jenis: "PMR / Pramuka",
-          nilai: "A (Sangat Baik)",
+          nilai: "A",
           keterangan: "Sangat aktif dan disiplin"
         },
         akhlak: {
@@ -263,15 +297,15 @@ export function generateInitialLegerData(classId = '8A') {
     const baseScore = 72 + ((idx * 7) % 22);
 
     const grades = {};
-    MATA_PELAJARAN.forEach((m, mIdx) => {
+    DEMO_GRADE_ORDER.forEach((key, mIdx) => {
       if (isFullyFilled) {
         const variation = ((mIdx * 3 + idx) % 9) - 4;
-        grades[m.key] = Math.min(98, Math.max(68, baseScore + variation));
+        grades[key] = Math.min(98, Math.max(68, baseScore + variation));
       } else {
         if (mIdx < 10) {
-          grades[m.key] = Math.min(95, Math.max(70, baseScore + (mIdx % 5)));
+          grades[key] = Math.min(95, Math.max(70, baseScore + (mIdx % 5)));
         } else {
-          grades[m.key] = '';
+          grades[key] = '';
         }
       }
     });
@@ -289,7 +323,7 @@ export function generateInitialLegerData(classId = '8A') {
       ranking: 1,
       pengembanganDiri: {
         jenis: idx % 3 === 0 ? "Pramuka" : idx % 3 === 1 ? "Banjari / Hadrah" : "English Club",
-        nilai: idx % 4 === 0 ? "A (Sangat Baik)" : "B (Baik)",
+        nilai: idx % 4 === 0 ? "A" : "B",
         keterangan: "Aktif dan disiplin mengikuti kegiatan"
       },
       akhlak: {

@@ -2,45 +2,49 @@
 
 import React from 'react';
 import { terbilangNilai } from '@/lib/terbilang';
+import { hitungStatistikSiswa, MATA_PELAJARAN, predikatPengembanganDiri, subjectGrade } from '@/lib/masterData';
+import { fitRaportSignature } from '@/lib/raportPrint';
+import { getWaliReportSettings } from '@/lib/waliReportSettings';
 
-export default function PrintableRaport({ student, schoolSettings, classInfo, totalStudents = 29 }) {
+function RaportSignature({ title, name, identifier, signature, signatureAlt }) {
+  return (
+    <div className="isolate row-span-4 grid min-w-0 grid-rows-[subgrid]">
+      <p>{title}</p>
+      <p className={`relative row-start-3 break-words ${name ? 'font-bold underline' : 'font-medium'}`}>
+        {signature && (
+          <img
+            src={signature}
+            alt={signatureAlt}
+            data-raport-signature=""
+            onLoad={event => fitRaportSignature(event.currentTarget)}
+            className="pointer-events-none absolute inset-x-0 bottom-full z-10 mx-auto h-[100px] w-[210px] max-w-full translate-y-2.5 object-contain object-bottom mix-blend-multiply"
+          />
+        )}
+        {name || '( ........................................ )'}
+      </p>
+      {identifier && <p className="row-start-4 text-[10px] text-gray-700">{identifier}</p>}
+    </div>
+  );
+}
+
+export default function PrintableRaport({ student, schoolSettings, classInfo, parentName, subjects = MATA_PELAJARAN, waliReportSettings = {}, totalStudents = 29 }) {
   if (!student) return null;
 
   const grades = student.grades || {};
   const fullAddress = schoolSettings.alamatLengkap?.trim();
+  const waliSettings = getWaliReportSettings(waliReportSettings, classInfo);
+  const { nipKepala, nipyKepala } = schoolSettings;
+  const kepalaIdLabel = !nipyKepala && nipKepala && nipKepala !== '-'
+    ? `NIP. ${nipKepala}`
+    : `NIPY. ${nipyKepala || '-'}`;
 
-  // Kelompokkan mapel sesuai format resmi Excel MTs Al Amiriyyah
-  const agamaList = [
-    { label: "a. Al-Qur'an Hadits", key: 'qurdist' },
-    { label: "b. Akidah Akhlak", key: 'aqidah' },
-    { label: "c. Fikih", key: 'fiqih' },
-    { label: "d. Sejarah Kebudayaan Islam", key: 'ski' },
-  ];
+  const { total, avg } = hitungStatistikSiswa(grades, subjects);
 
-  const mapelUmum = [
-    { no: '2', label: 'Pendidikan Kewarganegaraan', key: 'pkn' },
-    { no: '3', label: 'Bahasa Indonesia', key: 'bindo' },
-    { no: '4', label: 'Bahasa Arab', key: 'barab' },
-    { no: '5', label: 'Bahasa Inggris', key: 'bing' },
-    { no: '6', label: 'Matematika', key: 'mat' },
-    { no: '7', label: 'Ilmu Pengetahuan Alam', key: 'ipa' },
-    { no: '8', label: 'Ilmu Pengetahuan Sosial', key: 'ips' },
-    { no: '9', label: 'Seni Budaya / Prakarya', key: 'seni' },
-    { no: '10', label: 'Pendidikan Jasmani, Olahraga, dan Kesehatan', key: 'penjas' },
-  ];
-
-  const pilihanList = [
-    { label: 'a. Seni Budaya / Prakarya', key: 'ketrampilan' },
-    { label: 'b. Teknologi Informasi dan Komunikasi', key: 'tik' }
-  ];
-
-  const mulokList = [
-    { label: 'a. Bahasa Daerah', key: 'bdaerah' },
-    { label: 'b. Ke-NU-an', key: 'kenuan' }
-  ];
+  const mainSubjects = subjects.filter(subject => subject.group !== 'Mulok');
+  const mulokSubjects = subjects.filter(subject => subject.group === 'Mulok');
 
   const renderRow = (noStr, mapelName, key, isSub = false) => {
-    const val = grades[key];
+    const val = subjectGrade(grades, key);
     const hasVal = val !== '' && val !== null && val !== undefined;
     const numVal = hasVal ? Number(val) : 0;
     const kata = hasVal ? terbilangNilai(numVal) : '-';
@@ -96,14 +100,14 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
       </header>
 
       {/* JUDUL RAPORT */}
-      <div className="text-center my-3">
+      <div className="text-center my-3 print:my-2">
         <h2 className="text-[13px] font-bold tracking-wide uppercase underline decoration-1 underline-offset-4">
           {schoolSettings.judulRaport}
         </h2>
       </div>
 
       {/* IDENTITAS SISWA (2 KOLOM RAPI) */}
-      <div className="grid grid-cols-2 gap-4 mb-3 text-[11px] leading-relaxed">
+      <div className="grid grid-cols-2 gap-4 mb-3 text-[11px] leading-relaxed print:mb-2 print:leading-tight">
         <div>
           <table className="w-full">
             <tbody>
@@ -120,7 +124,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
             </tbody>
           </table>
         </div>
-        <div>
+        <div className="w-full max-w-[190px] justify-self-end">
           <table className="w-full">
             <tbody>
               <tr>
@@ -138,8 +142,8 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
         </div>
       </div>
 
-      {/* TABEL NILAI MATA PELAJARAN (17 MAPEL) */}
-      <table className="w-full border border-black border-collapse mb-2.5">
+      {/* TABEL NILAI MATA PELAJARAN */}
+      <table className="raport-grades w-full border border-black border-collapse mb-2.5">
         <thead>
           <tr className="border-b border-black bg-gray-50 text-[10.5px] font-bold">
             <th rowSpan="2" className="border-r border-black py-1 px-1 text-center w-7">No.</th>
@@ -154,43 +158,32 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
           </tr>
         </thead>
         <tbody>
-          {/* 1. Pendidikan Agama Header */}
-          <tr className="border-b border-black bg-gray-50/50 text-[11px] font-bold">
-            <td className="border-r border-black text-center py-0.5 font-mono">1.</td>
-            <td colSpan="5" className="py-0.5 px-2">Pendidikan Agama</td>
-          </tr>
-          {agamaList.map(item => renderRow('', item.label, item.key, true))}
-
-          {/* 2 - 10. Mapel Umum */}
-          {mapelUmum.map(item => renderRow(item.no + '.', item.label, item.key, false))}
-
-          {/* 11. Pilihan */}
-          <tr className="border-b border-black bg-gray-50/50 text-[11px] font-bold">
-            <td className="border-r border-black text-center py-0.5 font-mono">11.</td>
-            <td colSpan="5" className="py-0.5 px-2">Pilihan :</td>
-          </tr>
-          {pilihanList.map(item => renderRow('', item.label, item.key, true))}
+          {mainSubjects.map(({ name, key }, index) =>
+            renderRow(`${index + 1}.`, name, key)
+          )}
 
           {/* 12. Mulok */}
-          <tr className="border-b border-black bg-gray-50/50 text-[11px] font-bold">
-            <td className="border-r border-black text-center py-0.5 font-mono">12.</td>
+          {mulokSubjects.length > 0 && <tr className="border-b border-black bg-gray-50/50 text-[11px] font-bold">
+            <td className="border-r border-black text-center py-0.5 font-mono">{mainSubjects.length + 1}.</td>
             <td colSpan="5" className="py-0.5 px-2">Mulok :</td>
-          </tr>
-          {mulokList.map(item => renderRow('', item.label, item.key, true))}
+          </tr>}
+          {mulokSubjects.map(({ name, key }, index) =>
+            renderRow('', `${String.fromCharCode(97 + index)}. ${name.replace(/^Mulok:\s*/, '')}`, key, true)
+          )}
 
           {/* Jumlah & Rerata */}
           <tr className="border-b border-black font-bold text-[11px] bg-gray-50">
             <td colSpan="3" className="border-r border-black text-center py-1 px-2">Jumlah Nilai</td>
-            <td className="border-r border-black text-center py-1 font-mono">{student.totalNilai || 0}</td>
+            <td className="border-r border-black text-center py-1 font-mono">{total}</td>
             <td colSpan="2" className="py-1 px-2 text-[10px] italic">
-              {student.totalNilai ? terbilangNilai(student.totalNilai) : '-'}
+              {total ? terbilangNilai(total) : '-'}
             </td>
           </tr>
           <tr className="border-b border-black font-bold text-[11px] bg-gray-50">
             <td colSpan="3" className="border-r border-black text-center py-1 px-2">Rata-rata</td>
-            <td className="border-r border-black text-center py-1 font-mono">{student.rataRata || 0}</td>
+            <td className="border-r border-black text-center py-1 font-mono">{avg}</td>
             <td colSpan="2" className="py-1 px-2 text-[10px] italic">
-              {student.rataRata ? terbilangNilai(Math.round(student.rataRata)) : '-'}
+              {avg ? terbilangNilai(Math.round(avg)) : '-'}
             </td>
           </tr>
           <tr className="border-b border-black font-bold text-[11px]">
@@ -210,7 +203,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
             <tr className="border-b border-black bg-gray-50 font-bold">
               <th className="border-r border-black text-center py-0.5 px-1 w-7">No.</th>
               <th className="border-r border-black text-center py-0.5 px-2">Jenis Pengembangan Diri</th>
-              <th className="border-r border-black text-center py-0.5 px-2 w-28">Nilai</th>
+              <th className="border-r border-black text-center py-0.5 px-2 w-28">Predikat</th>
               <th className="text-center py-0.5 px-2">Keterangan</th>
             </tr>
           </thead>
@@ -218,7 +211,7 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
             <tr className="border-b border-black">
               <td className="border-r border-black text-center py-1 font-mono">1.</td>
               <td className="border-r border-black py-1 px-2">{student.pengembanganDiri?.jenis || 'Pramuka'}</td>
-              <td className="border-r border-black text-center py-1 px-2 font-semibold">{student.pengembanganDiri?.nilai || 'B (Baik)'}</td>
+              <td className="border-r border-black text-center py-1 px-2 font-semibold">{predikatPengembanganDiri(student.pengembanganDiri?.nilai) || '–'}</td>
               <td className="py-1 px-2">{student.pengembanganDiri?.keterangan || 'Mengikuti kegiatan dengan aktif'}</td>
             </tr>
           </tbody>
@@ -294,8 +287,8 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
       )}
 
       {/* TITIMANGSA & TANDA TANGAN (3 KOLOM) */}
-      <div className="text-[11px] mt-4 pt-1">
-        <div className="text-right mb-2 pr-4">
+      <div className="raport-signatures break-inside-avoid mt-4 pt-1 text-[11px] print:mt-2 print:pt-0">
+        <div className="mb-2 ml-auto w-fit max-w-full pr-4 text-left print:mb-1">
           <p>
             Diberikan di : <span className="font-semibold">{schoolSettings.titimangsa}</span>
           </p>
@@ -304,30 +297,27 @@ export default function PrintableRaport({ student, schoolSettings, classInfo, to
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-center pt-2">
-          {/* Kolom 1: Orang Tua */}
-          <div className="flex flex-col justify-between h-24">
-            <p>Orang Tua / Wali,</p>
-            <p className="font-medium">( ........................................ )</p>
-          </div>
+        <div className="grid grid-cols-3 grid-rows-[auto_84px_auto_auto] gap-x-2 text-center pt-2 print:pt-1">
+          <RaportSignature
+            title="Kepala Madrasah,"
+            name={schoolSettings.kepalaMadrasah}
+            identifier={kepalaIdLabel}
+            signature={schoolSettings.ttdKepala}
+            signatureAlt="Tanda tangan kepala madrasah"
+          />
 
-          {/* Kolom 2: Wali Kelas */}
-          <div className="flex flex-col justify-between h-24">
-            <p>Wali Kelas,</p>
-            <div>
-              <p className="font-bold underline uppercase">{classInfo?.wali || student.waliKelas || 'Mutmaina, S.Pd, Gr.'}</p>
-              <p className="text-[10px] text-gray-700">NIP. -</p>
-            </div>
-          </div>
+          <RaportSignature
+            title="Wali Kelas,"
+            name={classInfo?.wali || student.waliKelas || '–'}
+            identifier={`NIPY. ${waliSettings?.nipy || '–'}`}
+            signature={waliSettings?.signature}
+            signatureAlt="Tanda tangan wali kelas"
+          />
 
-          {/* Kolom 3: Kepala Madrasah */}
-          <div className="flex flex-col justify-between h-24">
-            <p>Mengetahui,<br />Kepala Madrasah,</p>
-            <div>
-              <p className="font-bold underline uppercase">{schoolSettings.kepalaMadrasah}</p>
-              <p className="text-[10px] text-gray-700">NIP. {schoolSettings.nipKepala || '-'}</p>
-            </div>
-          </div>
+          <RaportSignature
+            title="Orang Tua / Wali"
+            name={parentName}
+          />
         </div>
       </div>
 

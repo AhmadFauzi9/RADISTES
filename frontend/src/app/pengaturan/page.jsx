@@ -1,14 +1,66 @@
 'use client';
 
 import ModuleHeading from '@/components/common/ModuleHeading';
+import RaportImageInput from '@/components/raport/RaportImageInput';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { getWaliReportSettings } from '@/lib/waliReportSettings';
 
 export default function PengaturanPage() {
-  const { schoolSettings, saveSchoolSettings, showToast, isSuperAdmin } = useApp();
+  const { currentUser, isSuperAdmin, isWaliKelas } = useApp();
+  if (isSuperAdmin) return <SchoolSettingsForm />;
+  if (isWaliKelas) return <WaliSettingsForm key={currentUser.kelasWali} />;
+  return <p className="text-sm text-slate-600">Pengaturan raport hanya tersedia untuk admin dan wali kelas.</p>;
+}
+
+function WaliSettingsForm() {
+  const { currentUser, allClasses, waliReportSettings, saveWaliReportSettings, showToast } = useApp();
+  const [draft, setDraft] = useState({});
+  const [isReadingImage, setIsReadingImage] = useState(false);
+  const classInfo = allClasses.find(cls => cls.id === currentUser.kelasWali);
+  const formData = { nipy: '', signature: '', ...getWaliReportSettings(waliReportSettings, classInfo), ...draft };
+
+  function handleSave(event) {
+    event.preventDefault();
+    if (isReadingImage || !saveWaliReportSettings(formData)) return;
+    setDraft({});
+    showToast('NIPY dan tanda tangan wali kelas berhasil disimpan.', 'success');
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="module-panel">
+        <ModuleHeading label={`Wali Kelas ${currentUser.kelasWali}`} title="Pengaturan Raport"
+          description="Atur NIPY dan tanda tangan yang tampil pada raport kelas Anda." />
+      </div>
+      <form onSubmit={handleSave} className="module-panel space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="space-y-1 text-xs font-semibold text-slate-700">
+            <span className="block">NIPY Wali Kelas</span>
+            <input type="text" name="nipy" value={formData.nipy}
+              onChange={event => setDraft(previous => ({ ...previous, nipy: event.target.value }))}
+              className="module-control w-full" />
+          </label>
+          <RaportImageInput label="Tanda tangan wali kelas" value={formData.signature} signature
+            onChange={signature => setDraft(previous => ({ ...previous, signature }))}
+            busy={isReadingImage} onBusyChange={setIsReadingImage} />
+        </div>
+        <div className="flex justify-end border-t border-slate-100 pt-3">
+          <button data-module-action data-action-tone="primary" type="submit" disabled={isReadingImage}
+            title="Simpan Pengaturan Wali Kelas" aria-label="Simpan Pengaturan Wali Kelas">
+            <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function SchoolSettingsForm() {
+  const { schoolSettings, saveSchoolSettings, showToast } = useApp();
 
   const [draft, setDraft] = useState({});
-  const [isReadingLogo, setIsReadingLogo] = useState(false);
+  const [isReadingImage, setIsReadingImage] = useState(false);
   const formData = { ...schoolSettings, ...draft };
 
   const handleChange = (e) => {
@@ -21,12 +73,13 @@ export default function PengaturanPage() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    if (isReadingLogo || !saveSchoolSettings(formData)) return;
+    if (isReadingImage || !saveSchoolSettings({
+      ...formData,
+      nipyKepala: formData.nipyKepala.trim(),
+    })) return;
     setDraft({});
     showToast('Pengaturan lembaga & format raport STS berhasil diperbarui!', 'success');
   };
-
-  if (!isSuperAdmin) return <p className="text-sm text-slate-600">Pengaturan raport hanya tersedia untuk admin.</p>;
 
   return (
     <div className="space-y-4">
@@ -49,27 +102,9 @@ export default function PengaturanPage() {
               <span className="block">Deadline pengiriman nilai</span>
               <input className="module-control" type="date" name="deadlineSetor" value={formData.deadlineSetor || ''} onChange={handleChange} />
             </label>
-            <label className="space-y-1 font-semibold text-slate-700">
-              <span className="block">Logo kop raport</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" disabled={isReadingLogo} onChange={event => {
-                const file = event.target.files[0];
-                if (!file) return;
-                event.target.value = '';
-                if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 1024 * 1024) {
-                  showToast('Gunakan logo PNG, JPEG, atau WebP maksimal 1 MB.', 'warning');
-                  return;
-                }
-                const reader = new FileReader();
-                setIsReadingLogo(true);
-                reader.onload = () => setDraft(previous => ({ ...previous, logoKop: reader.result }));
-                reader.onerror = () => showToast('Logo gagal dibaca. Pilih ulang file logo.', 'warning');
-                reader.onloadend = () => setIsReadingLogo(false);
-                reader.readAsDataURL(file);
-              }} />
-              {formData.logoKop && (
-                <img src={formData.logoKop} alt="Pratinjau logo kop raport" className="h-14 w-14 object-contain" />
-              )}
-            </label>
+            <RaportImageInput label="Logo kop raport" value={formData.logoKop}
+              onChange={logoKop => setDraft(previous => ({ ...previous, logoKop }))}
+              busy={isReadingImage} onBusyChange={setIsReadingImage} />
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Yayasan / Naungan:</label>
               <input
@@ -204,6 +239,22 @@ export default function PengaturanPage() {
                 placeholder="AHMADI, M.Pd.I"
               />
             </div>
+            <div>
+              <label htmlFor="nipy-kepala" className="block text-[11px] font-bold text-slate-600 mb-1">
+                NIPY Kepala Madrasah
+              </label>
+              <input
+                id="nipy-kepala"
+                type="text"
+                name="nipyKepala"
+                value={formData.nipyKepala}
+                onChange={handleChange}
+                className="module-control w-full"
+              />
+            </div>
+            <RaportImageInput label="Tanda tangan kepala madrasah" value={formData.ttdKepala} signature
+              onChange={ttdKepala => setDraft(previous => ({ ...previous, ttdKepala }))}
+              busy={isReadingImage} onBusyChange={setIsReadingImage} />
           </div>
         </div>
 
@@ -211,7 +262,7 @@ export default function PengaturanPage() {
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button data-module-action
             type="submit"
-            disabled={isReadingLogo}
+            disabled={isReadingImage}
             className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer disabled:opacity-50"
           title="Simpan Pengaturan Raport"
           aria-label="Simpan Pengaturan Raport"

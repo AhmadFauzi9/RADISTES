@@ -7,8 +7,37 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import ImportDknModal from '@/components/import/ImportDknModal';
+import { downloadLegerExcel } from '@/lib/legerExcel';
+import { hitungStatistikSiswa, predikatPengembanganDiri, subjectGrade } from '@/lib/masterData';
 
 const toolbarButton = 'module-action';
+
+function LegerGradeInput({ score, label, disabled, onCommit, className }) {
+  const [draft, setDraft] = useState(null);
+
+  return (
+    <input
+      type="number"
+      min="0"
+      max="100"
+      step="any"
+      disabled={disabled}
+      aria-label={label}
+      value={draft ?? score}
+      onChange={event => setDraft(event.target.value)}
+      onBlur={event => {
+        const value = event.currentTarget.value;
+        if (!disabled && value !== String(score)) onCommit(value);
+        setDraft(null);
+      }}
+      onKeyDown={event => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+      }}
+      placeholder="-"
+      className={className}
+    />
+  );
+}
 
 export default function LegerPage() {
   const { 
@@ -83,14 +112,13 @@ export default function LegerPage() {
     if (!matchSearch) return false;
 
     const grades = student.grades || {};
-    const filledCount = allMapel.filter(m => grades[m.key] !== '' && grades[m.key] !== null && grades[m.key] !== undefined).length;
-    const isComplete = filledCount === allMapel.length;
+    const { isComplete } = hitungStatistikSiswa(grades, allMapel);
 
     if (filterStatus === 'complete') return isComplete;
     if (filterStatus === 'incomplete') return !isComplete;
     if (filterStatus === 'belowKKM') {
       return allMapel.some(m => {
-        const val = grades[m.key];
+        const val = subjectGrade(grades, m.key);
         return val !== '' && val !== null && val !== undefined && Number(val) < m.kkm;
       });
     }
@@ -98,10 +126,7 @@ export default function LegerPage() {
     return true;
   });
 
-  const completeCount = currentLeger.filter(s => {
-    const grades = s.grades || {};
-    return allMapel.filter(m => grades[m.key] !== '' && grades[m.key] !== null && grades[m.key] !== undefined).length === allMapel.length;
-  }).length;
+  const completeCount = currentLeger.filter(student => hitungStatistikSiswa(student.grades, allMapel).isComplete).length;
   const isAllComplete = completeCount === currentLeger.length && currentLeger.length > 0;
 
   const top10Students = [...currentLeger]
@@ -111,7 +136,8 @@ export default function LegerPage() {
   const handleSimulateFillRemaining = () => {
     currentLeger.forEach(student => {
       allMapel.forEach(m => {
-        if (!student.grades[m.key] || student.grades[m.key] === '') {
+        const grade = subjectGrade(student.grades, m.key);
+        if (grade == null || grade === '') {
           const randomScore = 75 + Math.floor(Math.random() * 16);
           updateStudentGrade(student.nis, m.key, randomScore);
         }
@@ -124,42 +150,11 @@ export default function LegerPage() {
     showToast(`Data Leger Kelas ${effectiveClassId} berhasil disimpan ke sistem!`, 'success');
   };
 
-  const handleExportExcel = () => {
-    showToast(`Mengekspor Leger Kelas ${effectiveClassId} ke file Excel (.xlsx)...`, 'info');
-    setTimeout(() => {
-      const headers = ['No', 'NIS', 'Nama Siswa', 'L/P', 'Kelas', ...allMapel.map(m => m.short), 'Jumlah Nilai', 'Rata-rata', 'Rank', 'Ekskul', 'Kelakuan', 'Kerajinan', 'Kerapian', 'Sakit', 'Izin', 'Alpa', 'Catatan'];
-      const rows = currentLeger.map(s => [
-        s.no,
-        s.nis,
-        `"${s.nama}"`,
-        s.lp,
-        s.kelas || effectiveClassId,
-        ...allMapel.map(m => s.grades[m.key] || 0),
-        s.totalNilai,
-        s.rataRata,
-        s.ranking,
-        `"${s.pengembanganDiri?.jenis || '-'}"`,
-        `"${s.akhlak?.kelakuan?.ket || 'Baik'}"`,
-        `"${s.akhlak?.kerajinan?.ket || 'Baik'}"`,
-        `"${s.akhlak?.kerapian?.ket || 'Baik'}"`,
-        s.absensi?.sakit || 0,
-        s.absensi?.izin || 0,
-        s.absensi?.alpa || 0,
-        `"${s.catatanWali || ''}"`
-      ]);
-
-      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `LEGER_NILAI_STS_${effectiveClassId}_2025-2026.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      showToast(`File Leger Kelas ${effectiveClassId} berhasil diunduh!`, 'success');
-    }, 600);
-  };
+  const handleExportExcel = () => downloadLegerExcel({
+    groups: [{ classId: effectiveClassId, students: currentLeger }],
+    subjects: allMapel,
+    schoolSettings,
+  }, showToast);
 
   return (
     <div className="space-y-4">
@@ -301,7 +296,7 @@ export default function LegerPage() {
             title="Nilai Mata Pelajaran"
             aria-label="Nilai Mata Pelajaran"
             >
-              <i aria-hidden="true" className="fa-solid fa-graduation-cap mr-1"></i> Nilai 17 Mapel
+              <i aria-hidden="true" className="fa-solid fa-graduation-cap mr-1"></i> Nilai {allMapel.length} Mapel
             </button>
             <button
               type="button"
@@ -329,9 +324,9 @@ export default function LegerPage() {
 
                 {activeTab === 'nilai' ? (
                   <>
-                    <th colSpan="17" className="py-1 px-2 text-center border-r border-slate-200 bg-brand-50 text-brand-900">
+                    {allMapel.length > 0 && <th colSpan={allMapel.length} className="py-1 px-2 text-center border-r border-slate-200 bg-brand-50 text-brand-900">
                       Nilai Setiap Mata Pelajaran (Skala 0 - 100)
-                    </th>
+                    </th>}
                     <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Jumlah</th>
                     <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-indigo-50 text-indigo-900 w-16">Rata-rata</th>
                     <th rowSpan={2} scope="col" className="py-2 px-2 text-center align-middle border-r border-slate-200 bg-amber-50 text-amber-900 w-14">Rank</th>
@@ -361,7 +356,7 @@ export default function LegerPage() {
                   ))
                 ) : (
                   <>
-                    <th className="py-1 px-2 text-center border-r border-slate-300">Jenis</th>
+                    <th className="min-w-[120px] py-1 px-2 text-center border-r border-slate-300">Jenis</th>
                     <th className="py-1 px-2 text-center border-r border-slate-300">Nilai</th>
                     <th className="py-1 px-2 text-center border-r border-slate-300">Kelakuan</th>
                     <th className="py-1 px-2 text-center border-r border-slate-300">Kerajinan</th>
@@ -378,7 +373,7 @@ export default function LegerPage() {
             <tbody className="divide-y divide-slate-200 font-sans">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="26" className="py-8 text-center text-slate-400">
+                  <td colSpan={activeTab === 'nilai' ? allMapel.length + 9 : 15} className="py-8 text-center text-slate-400">
                     <i className="fa-solid fa-inbox text-2xl mb-1 block"></i>
                     Tidak ada siswa yang cocok dengan filter atau pencarian.
                   </td>
@@ -419,9 +414,9 @@ export default function LegerPage() {
                       {activeTab === 'nilai' ? (
                         <>
                           {allMapel.map((m) => {
-                            const val = grades[m.key];
-                            const isBelowKKM = val !== '' && val !== null && val !== undefined && Number(val) < m.kkm;
-                            const isEmpty = val === '' || val === null || val === undefined;
+                            const val = subjectGrade(grades, m.key);
+                            const isEmpty = val === '';
+                            const isBelowKKM = !isEmpty && val < m.kkm;
 
                             return (
                               <td
@@ -430,14 +425,11 @@ export default function LegerPage() {
                                   isBelowKKM ? 'bg-rose-50' : isEmpty ? 'bg-amber-50/30' : ''
                                 }`}
                               >
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
+                                <LegerGradeInput
                                   disabled={isLocked}
-                                  value={val !== undefined ? val : ''}
-                                  onChange={(e) => updateStudentGrade(student.nis, m.key, e.target.value)}
-                                  placeholder="-"
+                                  score={val}
+                                  label={`${m.name} - ${student.nama}`}
+                                  onCommit={value => updateStudentGrade(student.nis, m.key, value)}
                                   className={`w-full py-1.5 text-center font-mono text-xs bg-transparent focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition ${
                                     isBelowKKM 
                                       ? 'text-rose-700 font-extrabold' 
@@ -473,6 +465,7 @@ export default function LegerPage() {
                               type="text"
                               disabled={isLocked}
                               value={student.pengembanganDiri?.jenis || ''}
+                              title={student.pengembanganDiri?.jenis || undefined}
                               onChange={(e) => updateStudentMeta(student.nis, 'pengembanganDiri', 'jenis', e.target.value)}
                               className="w-full text-xs outline-none bg-transparent"
                               placeholder="Pramuka/Banjari..."
@@ -482,10 +475,11 @@ export default function LegerPage() {
                             <input
                               type="text"
                               disabled={isLocked}
-                              value={student.pengembanganDiri?.nilai || ''}
-                              onChange={(e) => updateStudentMeta(student.nis, 'pengembanganDiri', 'nilai', e.target.value)}
+                              aria-label={`Predikat pengembangan diri ${student.nama}`}
+                              value={predikatPengembanganDiri(student.pengembanganDiri?.nilai)}
+                              onChange={e => updateStudentMeta(student.nis, 'pengembanganDiri', 'nilai', predikatPengembanganDiri(e.target.value))}
                               className="w-full text-xs outline-none bg-transparent text-center font-bold"
-                              placeholder="A/B..."
+                              placeholder="A"
                             />
                           </td>
                           <td className="py-1.5 px-2 border-r border-slate-200 text-center">
@@ -575,10 +569,10 @@ export default function LegerPage() {
                           type="button"
                           onClick={() => openRaportModal(student)}
                           className="p-1.5 px-2.5 rounded-lg bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white text-xs font-semibold transition cursor-pointer shadow-2xs flex items-center justify-center gap-1 mx-auto"
-                          title="Lihat Template Raport Siap Print Siswa Ini"
-                        aria-label="Lihat Template Raport Siap Print Siswa Ini"
+                          title="Pratinjau dan Cetak Raport"
+                          aria-label="Pratinjau dan Cetak Raport"
                         >
-                          <i aria-hidden="true" className="fa-solid fa-file-pdf"></i>
+                          <i aria-hidden="true" className="fa-solid fa-print"></i>
                         </button>
                       </td>
                     </tr>
@@ -674,7 +668,7 @@ export default function LegerPage() {
                 Status Pengisian Nilai Kelas {effectiveClassId}:
               </p>
               <p className="text-[11px] text-indigo-800">
-                Saat ini terdapat <strong>{completeCount}</strong> dari <strong>{currentLeger.length}</strong> siswa yang nilainya sudah terisi penuh 17 mapel.
+                Saat ini terdapat <strong>{completeCount}</strong> dari <strong>{currentLeger.length}</strong> siswa yang nilainya sudah terisi penuh {allMapel.length} mapel.
               </p>
             </div>
 

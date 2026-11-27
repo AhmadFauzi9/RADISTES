@@ -289,23 +289,6 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
           </label>
         </div>
 
-        {/* Tombol Unduh Template Sampel */}
-        <div className="flex items-center justify-between text-xs text-slate-500 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200">
-          <div className="flex items-center gap-1.5">
-            <i className="fa-solid fa-lightbulb text-amber-600"></i>
-            <span>Format kolom DKN yang dibaca: <code>NO, INDUK, NAMA, N. R</code></span>
-          </div>
-          <button data-module-action data-action-tone="success"
-            type="button"
-            onClick={handleDownloadSample}
-            className="text-brand-700 hover:underline font-bold text-[11px] cursor-pointer"
-          title="Unduh Contoh DKN"
-          aria-label="Unduh Contoh DKN"
-          >
-            <i aria-hidden="true" className="fa-solid fa-download"></i>
-          </button>
-        </div>
-
         {/* Preview Hasil Parsing */}
         {parsedData.length > 0 && (
           <div className="flex-1 overflow-hidden border border-slate-200 rounded-xl flex flex-col">
@@ -344,6 +327,15 @@ export default function ImportDknModal({ isOpen, onClose, targetClass = '7K', ta
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button data-module-action data-action-tone="success"
+            type="button"
+            onClick={handleDownloadSample}
+            className="mr-auto"
+            title="Unduh Contoh DKN"
+            aria-label="Unduh Contoh DKN"
+          >
+            <i aria-hidden="true" className="fa-solid fa-download" />
+          </button>
           <button data-module-action
             type="button"
             onClick={onClose}

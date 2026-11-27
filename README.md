@@ -57,7 +57,7 @@ c:\xampp\htdocs\RADISTES\
         ├── context/
         │   └── AppContext.jsx      # State management data leger, auto-recalculate & ranking
         └── lib/
-            ├── masterData.js       # Master data 49 Kelas, 17 Mapel, 29 Siswa 8A dari Excel
+            ├── masterData.js       # Master data 49 Kelas, 13 Mapel, 29 Siswa 8A dari Excel
             └── terbilang.js        # Konverter angka ke huruf (0-100) lookup sesuai Excel
 ```
 
@@ -104,11 +104,11 @@ c:\xampp\htdocs\RADISTES\
    - Grid 5 kartu ringkasan status kelengkapan, rata-rata kelas, dan status kunci.
 2. **Spreadsheet Leger Interaktif**:
    - Input langsung pada cell tabel nilai.
-   - 17 Mata Pelajaran lengkap dengan KKM 70.
+   - 13 Mata Pelajaran lengkap dengan KKM 70.
    - Auto-calculate Jumlah Nilai dan Rata-rata secara instan.
    - Dynamic Auto-Ranking (1..N) dengan icon piala emas/perak/perunggu untuk Juara 1, 2, dan 3.
    - Tabel Peringkat 10 Besar sesuai dengan sheet Excel STS asli.
-   - Tab beralih antara "Nilai 17 Mapel" dan "Ekskul, Akhlak & Absensi".
+   - Tab beralih antara "Nilai 13 Mapel" dan "Ekskul, Akhlak & Absensi".
    - Export Leger ke Excel / CSV.
 3. **Template Raport STS Siap Cetak (1:1 Excel MTs Al Amiriyyah)**:
    - Kop surat lengkap Yayasan Pondok Pesantren Darussalam & MTs Al Amiriyyah.

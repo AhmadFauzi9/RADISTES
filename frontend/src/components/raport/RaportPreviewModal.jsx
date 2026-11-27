@@ -2,7 +2,8 @@
 
 import React, { useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { waitForRaportImages } from '@/lib/raportPrint';
+import { prepareRaportPrint } from '@/lib/raportPrint';
+import { studentBiodataKey } from '@/lib/studentBiodata';
 import PrintableRaport from './PrintableRaport';
 
 export default function RaportPreviewModal() {
@@ -13,8 +14,11 @@ export default function RaportPreviewModal() {
     setPreviewStudent, 
     previewClassId,
     allClasses,
+    allMapel,
     legerByClass,
+    studentBiodata,
     schoolSettings, 
+    waliReportSettings,
   } = useApp();
   const contentRef = useRef(null);
 
@@ -28,19 +32,18 @@ export default function RaportPreviewModal() {
   const nextStudent = currentIndex < currentLeger.length - 1 ? currentLeger[currentIndex + 1] : null;
 
   const handlePrint = async () => {
-    if (schoolSettings.logoKop) {
-      const content = contentRef.current;
-      await waitForRaportImages(content);
-      if (!content || contentRef.current !== content) return;
-    }
+    const content = contentRef.current;
+    if (!content) return;
+    await prepareRaportPrint(content);
+    if (contentRef.current !== content) return;
     window.print();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto print:p-0 print:bg-white print:static">
+    <div className="raport-preview-print fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
       
       {/* Outer Modal Container */}
-      <div className="relative bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 print:border-none print:shadow-none print:max-w-none print:max-h-none print:rounded-none">
+      <div className="relative bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 print:block print:border-none print:shadow-none print:max-w-none print:max-h-none print:rounded-none">
         
         {/* Modal Toolbar (Disembunyikan saat print) */}
         <div className="no-print module-table-caption flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-t-2xl">
@@ -111,11 +114,14 @@ export default function RaportPreviewModal() {
         </div>
 
         {/* Modal Body / Printable Raport Container */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 print:bg-white print:p-0 custom-scrollbar">
+        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 print:overflow-visible print:bg-white print:p-0 custom-scrollbar">
           <PrintableRaport
             student={previewStudent}
+            subjects={allMapel}
             schoolSettings={schoolSettings}
             classInfo={activeClassInfo}
+            parentName={studentBiodata[studentBiodataKey(previewClassId, previewStudent.nis)]?.namaOrangTua}
+            waliReportSettings={waliReportSettings}
             totalStudents={currentLeger.length}
           />
         </div>

@@ -30,14 +30,17 @@ export default function Sidebar() {
       title: 'Data Siswa',
       icon: 'fa-users', 
       path: '/data-siswa',
-      visible: isSuperAdmin
+      visible: isSuperAdmin || isWaliKelas
     },
-    { 
-      key: 'wali-kelas', 
-      title: 'Wali Kelas', 
-      icon: 'fa-user-tie', 
-      path: '/wali-kelas',
-      visible: isSuperAdmin
+    {
+      key: 'data-master',
+      title: 'Data Master',
+      visible: isSuperAdmin,
+      children: [
+        { key: 'wali-kelas', title: 'Wali Kelas', icon: 'fa-user-tie', path: '/wali-kelas' },
+        { key: 'guru-mapel', title: 'Guru Mapel', icon: 'fa-chalkboard-user', path: '/guru-mapel' },
+        { key: 'mata-pelajaran', title: 'Mata Pelajaran', icon: 'fa-book-open', path: '/mata-pelajaran' },
+      ],
     },
     { 
       key: 'leger', 
@@ -67,10 +70,6 @@ export default function Sidebar() {
       visible: true 
     },
     {
-      key: 'guru-mapel', title: 'Guru Mapel', icon: 'fa-chalkboard-user', path: '/guru-mapel',
-      visible: isSuperAdmin
-    },
-    {
       key: 'nilai-terbaik', title: 'Nilai Terbaik', icon: 'fa-trophy', path: '/nilai-terbaik',
       visible: isGuruMapelOnly || isWaliKelas
     },
@@ -79,11 +78,45 @@ export default function Sidebar() {
       title: 'Pengaturan', 
       icon: 'fa-gear', 
       path: '/pengaturan',
-      visible: isSuperAdmin
+      visible: isSuperAdmin || isWaliKelas
     }
   ];
 
   const visibleMenus = ALL_MENU_ITEMS.filter(m => m.visible);
+
+  function renderMenuLink(item) {
+    const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path));
+    const activeClass = isActive
+      ? 'bg-brand-50 text-brand-700 font-bold border border-brand-200 shadow-2xs'
+      : 'text-slate-600 hover:bg-slate-50 font-medium hover:text-slate-900 border border-transparent';
+    const iconColor = isActive ? 'text-brand-600' : 'text-slate-400';
+
+    return (
+      <Link
+        key={item.key}
+        href={item.path}
+        aria-current={isActive ? 'page' : undefined}
+        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition shrink-0 md:shrink ${activeClass}`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <i aria-hidden="true" className={`fa-solid ${item.icon} w-4 text-center text-sm ${iconColor}`}></i>
+          <span className="whitespace-nowrap">{item.title}</span>
+        </div>
+
+        {item.badge && (
+          <span className="hidden md:inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">
+            {item.badge}
+          </span>
+        )}
+
+        {item.notifCount > 0 && (
+          <span className="ml-auto bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
+            {item.notifCount}
+          </span>
+        )}
+      </Link>
+    );
+  }
 
   return (
     <aside className="sticky top-16 z-20 w-full md:w-[230px] shrink-0">
@@ -103,38 +136,18 @@ export default function Sidebar() {
           </p>
         </div>
 
-        {visibleMenus.map((item) => {
-          const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path));
-          const activeClass = isActive
-            ? 'bg-brand-50 text-brand-700 font-bold border border-brand-200 shadow-2xs'
-            : 'text-slate-600 hover:bg-slate-50 font-medium hover:text-slate-900 border border-transparent';
-          const iconColor = isActive ? 'text-brand-600' : 'text-slate-400';
-
-          return (
-            <Link
-              key={item.key}
-              href={item.path}
-              className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs transition shrink-0 md:shrink ${activeClass}`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <i className={`fa-solid ${item.icon} w-4 text-center text-sm ${iconColor}`}></i>
-                <span className="whitespace-nowrap">{item.title}</span>
-              </div>
-              
-              {item.badge && (
-                <span className="hidden md:inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">
-                  {item.badge}
-                </span>
-              )}
-
-              {item.notifCount !== undefined && item.notifCount > 0 && (
-                <span className="ml-auto bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
-                  {item.notifCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        {visibleMenus.map(item => item.children ? (
+          <React.Fragment key={item.key}>
+            <div role="group" aria-label={item.title}
+              className="flex shrink-0 items-center gap-1 md:my-1 md:flex-col md:items-stretch">
+              <p className="flex items-center gap-2 whitespace-nowrap px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 after:h-px after:w-4 after:bg-slate-200 after:content-[''] md:after:flex-1">
+                {item.title}
+              </p>
+              {item.children.map(renderMenuLink)}
+            </div>
+            <hr className="mx-1 self-stretch border-l border-t-0 border-slate-200 md:mx-3 md:my-1 md:border-l-0 md:border-t" />
+          </React.Fragment>
+        ) : renderMenuLink(item))}
 
         <hr className="hidden md:block my-2 border-slate-100" />
 

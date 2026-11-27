@@ -36,7 +36,7 @@ export default function Header() {
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block truncate">
-              {schoolSettings.namaMadrasah} • Raport Sumatif Tengah Semester
+              Raport Digital Sumatif Tengah Semester  • {schoolSettings.namaMadrasah}
             </p>
           </div>
         </Link>

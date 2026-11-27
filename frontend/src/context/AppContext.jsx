@@ -1,15 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { 
   SCHOOL_INFO, 
   MATA_PELAJARAN, 
   DAFTAR_KELAS, 
   DAFTAR_GURU_SEKOLAH,
+  findSubject,
   generateInitialLegerData, 
   hitungRankingLeger,
-  hitungStatistikSiswa
+  hitungStatistikSiswa,
+  roundLegerGrade
 } from '@/lib/masterData';
+import { normalizeTeacherAssignments } from '@/lib/teaching';
+import { readStudentBiodata, storeStudentBiodata, STUDENT_BIODATA_KEY } from '@/lib/studentBiodata';
+import { readWaliReportSettings, storeWaliReportSettings, WALI_REPORT_SETTINGS_KEY } from '@/lib/waliReportSettings';
+import { activeLegerSubjects, readSubjectCatalog } from '@/lib/subjectCatalog';
 
 const AppContext = createContext(null);
 const SCHOOL_SETTINGS_KEY = 'radistes_school_settings';
@@ -23,6 +29,10 @@ function parseSchoolSettings(value) {
 export function AppProvider({ children }) {
   // Pengaturan Sekolah & Raport
   const [schoolSettings, setSchoolSettings] = useState(SCHOOL_INFO);
+  const subjectCatalog = schoolSettings.subjectCatalog;
+  const allMapel = useMemo(() => activeLegerSubjects(readSubjectCatalog(subjectCatalog)), [subjectCatalog]);
+  const [waliReportSettings, setWaliReportSettings] = useState({});
+  const [studentBiodata, setStudentBiodata] = useState({});
 
   // Master Data 49 Kelas & Penugasan Wali Kelas
   const [classesList, setClassesList] = useState(DAFTAR_KELAS);
@@ -30,13 +40,18 @@ export function AppProvider({ children }) {
   // Daftar Seluruh Guru di Sekolah (baik wali kelas maupun guru mapel murni)
   const [teachersList, setTeachersList] = useState(DAFTAR_GURU_SEKOLAH);
   const [submissionRecords, setSubmissionRecords] = useState({});
+  const [gradeDraftEdits, setGradeDraftEdits] = useState({});
 
   const recordSubmission = (classId, subjectKey, sent = false) => {
     if (!currentUser || currentUser.role === 'admin') return;
     const key = [currentUser.username, classId, subjectKey].join(':');
+    const updatedAt = new Date().toISOString();
     setSubmissionRecords(previous => ({
       ...previous,
-      [key]: { classId, subjectKey, teacher: currentUser.nama, username: currentUser.username, sent, updatedAt: new Date().toISOString() }
+      [key]: {
+        classId, subjectKey, teacher: currentUser.nama, username: currentUser.username, sent, updatedAt,
+        sentAt: sent ? updatedAt : previous[key]?.sentAt,
+      }
     }));
   };
 
@@ -48,7 +63,16 @@ export function AppProvider({ children }) {
   const [selectedClassId, setSelectedClassId] = useState('8A');
 
   // Database Leger per Kelas
-  const [legerByClass, setLegerByClass] = useState({});
+  const [storedLegerByClass, setLegerByClass] = useState({});
+  const legerByClass = useMemo(() => Object.fromEntries(
+    Object.entries(storedLegerByClass).map(([classId, students]) => [
+      classId,
+      hitungRankingLeger(students.map(student => {
+        const { total, avg } = hitungStatistikSiswa(student.grades, allMapel);
+        return { ...student, totalNilai: total, rataRata: avg };
+      })),
+    ])
+  ), [storedLegerByClass, allMapel]);
 
   // Status Kunci Nilai Fix per Kelas
   const [classStatus, setClassStatus] = useState({
@@ -97,6 +121,16 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error(error);
     }
+    try {
+      setWaliReportSettings(readWaliReportSettings(localStorage));
+    } catch (error) {
+      console.error(error);
+    }
+    try {
+      setStudentBiodata(readStudentBiodata(localStorage));
+    } catch (error) {
+      console.error(error);
+    }
 
     let loadedTeachers = DAFTAR_GURU_SEKOLAH;
     try {
@@ -104,8 +138,8 @@ export function AppProvider({ children }) {
       if (savedTeachers) {
         const parsedTeachers = JSON.parse(savedTeachers);
         if (Array.isArray(parsedTeachers) && parsedTeachers.length > 0) {
-          loadedTeachers = parsedTeachers;
-          setTeachersList(parsedTeachers);
+          loadedTeachers = parsedTeachers.map(normalizeTeacherAssignments);
+          setTeachersList(loadedTeachers);
         }
       }
     } catch (e) {
@@ -123,7 +157,7 @@ export function AppProvider({ children }) {
         const latestTeacher = loadedTeachers.find(
           t => t.username === parsed.username || t.id === parsed.id
         );
-        const mergedUser = latestTeacher ? { ...parsed, ...latestTeacher } : parsed;
+        const mergedUser = normalizeTeacherAssignments(latestTeacher ? { ...parsed, ...latestTeacher } : parsed);
         const resolved = resolveTeacherRole(mergedUser, DAFTAR_KELAS);
         setCurrentUser(resolved);
         if (resolved.role === 'walikelas' && resolved.kelasWali) {
@@ -159,11 +193,25 @@ export function AppProvider({ children }) {
           console.error(error);
         }
       }
+      if (event.storageArea === localStorage && (event.key === WALI_REPORT_SETTINGS_KEY || event.key === null)) {
+        try {
+          setWaliReportSettings(readWaliReportSettings(localStorage));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      if (event.storageArea === localStorage && (event.key === STUDENT_BIODATA_KEY || event.key === null)) {
+        try {
+          setStudentBiodata(readStudentBiodata(localStorage));
+        } catch (error) {
+          console.error(error);
+        }
+      }
       if (event.key === 'radistes_teachers_list' && event.newValue) {
         try {
           const updated = JSON.parse(event.newValue);
           if (Array.isArray(updated)) {
-            setTeachersList(updated);
+            setTeachersList(updated.map(normalizeTeacherAssignments));
           }
         } catch (e) {
           console.error(e);
@@ -192,6 +240,23 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error(error);
       showToast('Pengaturan gagal disimpan ke browser. Periksa ruang penyimpanan atau coba logo yang lebih kecil.', 'warning');
+      return false;
+    }
+  };
+
+  const saveWaliReportSettings = (settings) => {
+    const classInfo = classesList.find(cls => cls.id === currentUser?.kelasWali);
+    if (currentUser?.role !== 'walikelas' || !classInfo?.wali ||
+      resolveTeacherRole(currentUser)?.kelasWali !== classInfo.id) {
+      showToast('Pengaturan tanda tangan hanya tersedia untuk wali kelas yang bertugas.', 'warning');
+      return false;
+    }
+    try {
+      setWaliReportSettings(storeWaliReportSettings(localStorage, classInfo, settings));
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Pengaturan wali kelas gagal disimpan ke browser.', 'warning');
       return false;
     }
   };
@@ -236,7 +301,7 @@ export function AppProvider({ children }) {
         ...teacherObj,
         role: 'gurumapel',
         kelasWali: null,
-        badge: `Guru Mapel (${teacherObj.mapelNama || 'Pengajar'})`
+        badge: `Guru Mapel (${findSubject(MATA_PELAJARAN, teacherObj.mapelNama)?.name || teacherObj.mapelNama || 'Pengajar'})`
       };
     }
   };
@@ -298,6 +363,7 @@ export function AppProvider({ children }) {
   // Fungsi Logout
   const logout = () => {
     setCurrentUser(null);
+    setGradeDraftEdits({});
     try {
       sessionStorage.removeItem('radistes_session_user');
       localStorage.removeItem('radistes_current_user');
@@ -317,22 +383,15 @@ export function AppProvider({ children }) {
       const classData = prev[selectedClassId] ? [...prev[selectedClassId]] : [];
       const updatedList = classData.map(student => {
         if (student.nis === nis) {
-          const newGrades = { ...student.grades, [mapelKey]: newValue };
-          const stat = hitungStatistikSiswa(newGrades);
-          return {
-            ...student,
-            grades: newGrades,
-            totalNilai: stat.total,
-            rataRata: stat.avg
-          };
+          const newGrades = { ...student.grades, [mapelKey]: roundLegerGrade(newValue) };
+          return { ...student, grades: newGrades };
         }
         return student;
       });
 
-      const rankedList = hitungRankingLeger(updatedList);
       return {
         ...prev,
-        [selectedClassId]: rankedList
+        [selectedClassId]: updatedList
       };
     });
   };
@@ -400,23 +459,17 @@ export function AppProvider({ children }) {
           return Boolean(normA && normB && normA === normB);
         });
 
-        if (matched && matched.score !== undefined && matched.score !== null) {
-          const newGrades = { ...student.grades, [targetMapelKey]: matched.score };
-          const stat = hitungStatistikSiswa(newGrades);
-          return {
-            ...student,
-            grades: newGrades,
-            totalNilai: stat.total,
-            rataRata: stat.avg
-          };
+        const score = roundLegerGrade(matched?.score);
+        if (score !== '') {
+          const newGrades = { ...student.grades, [targetMapelKey]: score };
+          return { ...student, grades: newGrades };
         }
         return student;
       });
 
-      const ranked = hitungRankingLeger(updatedList);
       return {
         ...prev,
-        [targetClass]: ranked
+        [targetClass]: updatedList
       };
     });
 
@@ -499,6 +552,23 @@ export function AppProvider({ children }) {
   const isWaliKelas = currentUser?.role === 'walikelas';
   const isGuruMapelOnly = currentUser?.role === 'gurumapel';
 
+  const saveStudentBiodata = (classId, nis, details) => {
+    if (!isWaliKelas || currentUser.kelasWali !== classId ||
+      resolveTeacherRole(currentUser)?.kelasWali !== classId ||
+      !legerByClass[classId]?.some(student => student.nis === nis)) {
+      showToast('Biodata hanya dapat diubah oleh wali kelas siswa ini.', 'warning');
+      return false;
+    }
+    try {
+      setStudentBiodata(storeStudentBiodata(localStorage, classId, nis, details));
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Biodata siswa gagal disimpan ke browser.', 'warning');
+      return false;
+    }
+  };
+
   const changeReportStudent = (classId, nis, details) => {
     if (classStatus[classId]?.isLocked || !(isSuperAdmin || (isWaliKelas && currentUser.kelasWali === classId))) return;
     setLegerByClass(previous => {
@@ -506,7 +576,7 @@ export function AppProvider({ children }) {
       const updated = details
         ? students.map(student => student.nis === nis ? { ...student, ...details } : student)
         : students.filter(student => student.nis !== nis);
-      return { ...previous, [classId]: hitungRankingLeger(updated) };
+      return { ...previous, [classId]: updated };
     });
   };
 
@@ -515,11 +585,15 @@ export function AppProvider({ children }) {
       value={{
         schoolSettings,
         saveSchoolSettings,
+        waliReportSettings,
+        saveWaliReportSettings,
         currentUser,
         isAuthLoaded,
         teachersList,
         setTeachersList,
         submissionRecords,
+        gradeDraftEdits,
+        setGradeDraftEdits,
         recordSubmission,
         loginGuru,
         logout,
@@ -533,9 +607,11 @@ export function AppProvider({ children }) {
         setClassesList,
         updateSingleWaliKelas,
         bulkImportWaliKelas,
-        allMapel: MATA_PELAJARAN,
+        allMapel,
         currentLeger,
         legerByClass,
+        studentBiodata,
+        saveStudentBiodata,
         updateStudentGrade,
         updateStudentMeta,
         classStatus,

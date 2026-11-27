@@ -2,11 +2,14 @@
 
 import ModuleHeading from '@/components/common/ModuleHeading';
 import ModulePagination from '@/components/common/ModulePagination';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { downloadExcelTemplate } from '@/lib/excelTemplate';
 import { calculateDknAverage, dknAverageFormula, dknStatusFormula, UH_COLUMNS } from '@/lib/dknScores';
+import { subjectGrade } from '@/lib/masterData';
+import { gradeDraftKey, readGradeDraft, saveGradeDraft } from '@/lib/gradeDraftStorage';
 import { teachingAssignments } from '@/lib/teaching';
 import SubmissionTable from '@/components/grades/SubmissionTable';
+import RaportMetadata from '@/components/raport/RaportMetadata';
 import { useApp } from '@/context/AppContext';
 import ImportDknModal from '@/components/import/ImportDknModal';
 
@@ -16,13 +19,16 @@ const QUICK_FILL_COLUMNS = [
 ];
 
 export default function SetorNilaiPage() {
-  const { currentUser, isSuperAdmin, teachersList, allClasses, allMapel, legerByClass, schoolSettings, classStatus, importDknScores, showToast, recordSubmission } = useApp();
+  const {
+    currentUser, isSuperAdmin, teachersList, allClasses, allMapel, legerByClass, schoolSettings,
+    classStatus, importDknScores, showToast, recordSubmission, submissionRecords, gradeDraftEdits, setGradeDraftEdits,
+  } = useApp();
   const [classChoice, setTargetClassId] = useState('');
   const [subjectChoice, setSelectedMapelKey] = useState('');
   const [quickScoreInput, setQuickScoreInput] = useState('');
   const [quickFillColumn, setQuickFillColumn] = useState('sts');
   const [isDknModalOpen, setIsDknModalOpen] = useState(false);
-  const [drafts, setDrafts] = useState({});
+  const [savedDraft, setSavedDraft] = useState(null);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const tableViewportRef = useRef(null);
@@ -31,30 +37,72 @@ export default function SetorNilaiPage() {
   const assignments = teachingAssignments(activeTeacher, allMapel);
   const eligibleClasses = isSuperAdmin ? allClasses : allClasses.filter(item => assignments.some(assignment => assignment.classId === item.id));
   const targetClassId = eligibleClasses.some(item => item.id === classChoice) ? classChoice : eligibleClasses[0]?.id;
+  const targetClass = eligibleClasses.find(item => item.id === targetClassId);
   const eligibleSubjects = isSuperAdmin ? allMapel : allMapel.filter(item => assignments.some(assignment => assignment.classId === targetClassId && assignment.subjectKey === item.key));
   const selectedMapelKey = eligibleSubjects.some(item => item.key === subjectChoice) ? subjectChoice : eligibleSubjects[0]?.key;
   const activeMapel = allMapel.find(m => m.key === selectedMapelKey);
+  const submission = submissionRecords[[currentUser?.username, targetClassId, selectedMapelKey].join(':')];
+  const sent = submission?.sent;
+  const submissionStatus = sent ? 'Sudah dikirim' : submission?.sentAt ? 'Perubahan belum dikirim' : 'Belum dikirim';
   const currentLeger = legerByClass[targetClassId] || [];
   const safePage = Math.min(currentPage, Math.max(1, Math.ceil(currentLeger.length / pageSize)));
   const startIndex = (safePage - 1) * pageSize;
   const pageStudents = currentLeger.slice(startIndex, startIndex + pageSize);
-  const draftKey = targetClassId + ':' + selectedMapelKey;
-  const gradesDraft = drafts[draftKey] || {};
+  const draftKey = gradeDraftKey(currentUser?.username, schoolSettings.tahunAjaran, schoolSettings.semester, targetClassId, selectedMapelKey);
+  const draftReady = savedDraft?.key === draftKey;
+  const savedGrades = draftReady ? savedDraft.grades : {};
+  const pendingGrades = gradeDraftEdits[draftKey] || {};
+  const gradesDraft = { ...savedGrades, ...pendingGrades };
+  const hasUnsavedGrades = Object.keys(pendingGrades).length > 0;
   const locked = classStatus[targetClassId]?.isLocked;
+
+  useEffect(() => {
+    if (!draftKey || isSuperAdmin) return;
+    try {
+      setSavedDraft({ key: draftKey, grades: readGradeDraft(localStorage, draftKey) });
+    } catch (error) {
+      console.error(error);
+      setSavedDraft({ key: draftKey, grades: {} });
+    }
+  }, [draftKey, isSuperAdmin]);
   const changePage = page => {
     setCurrentPage(page);
     if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
   };
-  const scoreFor = student => gradesDraft[student.nis] ?? student.grades[selectedMapelKey] ?? '';
+  const scoreFor = student => gradesDraft[student.nis] ?? subjectGrade(student.grades, selectedMapelKey) ?? '';
   const averageFor = student => calculateDknAverage(
     scoreFor(student),
     UH_COLUMNS.map(column => gradesDraft[student.nis + ':' + column.key]),
   );
-  const handleScoreChange = (nis, value) => {
+  const editDraftGrades = (changes) => {
+    if (locked || !draftKey || !Object.keys(changes).length) return;
     recordSubmission(targetClassId, selectedMapelKey);
-    setDrafts(prev => ({ ...prev, [draftKey]: { ...prev[draftKey], [nis]: value } }));
+    setGradeDraftEdits(prev => ({ ...prev, [draftKey]: { ...prev[draftKey], ...changes } }));
+  };
+  const persistDraft = (grades) => {
+    if (locked || !draftKey || !draftReady) return false;
+    try {
+      const saved = saveGradeDraft(localStorage, draftKey, grades);
+      setSavedDraft({ key: draftKey, grades: saved });
+      setGradeDraftEdits(previous => {
+        const next = { ...previous };
+        delete next[draftKey];
+        return next;
+      });
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Draft gagal disimpan. Periksa penyimpanan browser dan coba lagi.', 'warning');
+      return false;
+    }
+  };
+  const handleSaveDraft = () => {
+    if (hasUnsavedGrades && persistDraft(pendingGrades)) {
+      showToast(`Draft ${activeMapel.name} kelas ${targetClassId} tersimpan di browser ini.`, 'success');
+    }
   };
   const handleSubmitGrades = () => {
+    if (!draftReady) return;
     const scores = currentLeger.filter(student => averageFor(student) !== '')
       .map(student => ({ nis: student.nis, score: averageFor(student) }))
       .filter(item => Number.isFinite(item.score) && item.score >= 0 && item.score <= 100);
@@ -62,7 +110,11 @@ export default function SetorNilaiPage() {
       showToast('Lengkapi nilai 0–100. Leger yang terkunci tidak dapat diubah.', 'warning');
       return;
     }
-    importDknScores(targetClassId, selectedMapelKey, scores, 'Nilai telah dikirim ke leger wali kelas.');
+    // Simpan STS asli sebelum leger menampung nilai rata-rata yang dikirim.
+    const stsScores = Object.fromEntries(currentLeger.map(student => [student.nis, scoreFor(student)]));
+    if (persistDraft({ ...pendingGrades, ...stsScores })) {
+      importDknScores(targetClassId, selectedMapelKey, scores, 'Nilai telah dikirim ke leger wali kelas.');
+    }
   };
   const handleQuickFill = () => {
     const value = Number(quickScoreInput);
@@ -77,11 +129,7 @@ export default function SetorNilaiPage() {
       quickFillColumn === 'sts' ? student.nis : student.nis + ':' + quickFillColumn,
       value,
     ]));
-    setDrafts(prev => ({
-      ...prev,
-      [draftKey]: { ...prev[draftKey], ...filledScores },
-    }));
-    if (currentLeger.length) recordSubmission(targetClassId, selectedMapelKey);
+    editDraftGrades(filledScores);
     showToast(`Nilai ${selectedColumn.label} berhasil diterapkan ke semua siswa.`, 'success');
   };
   const downloadTemplate = () => {
@@ -124,7 +172,10 @@ export default function SetorNilaiPage() {
       {/* Header Info */}
       <div className="module-panel space-y-3">
         <ModuleHeading label="Portal Guru Mapel" title="Setor Nilai STS" description="Isi nilai siswa secara manual atau impor dari Excel DKN." />
-
+        <RaportMetadata
+          schoolSettings={schoolSettings}
+          classValue={`${targetClass?.nama || targetClassId} • ${targetClass?.wali || 'Belum ada wali kelas'}`}
+        />
       </div>
       <div className="module-toolbar" aria-label="Kontrol Setor Nilai">
         <select aria-label="Kelas" value={targetClassId?.slice(0, 1) || ''} onChange={event => {
@@ -188,7 +239,12 @@ export default function SetorNilaiPage() {
             title="Impor Nilai DKN" aria-label="Impor Nilai DKN">
             <i aria-hidden="true" className="fa-solid fa-file-import" />
           </button>
-          <button data-module-action data-action-tone="primary" type="button" disabled={locked || !currentLeger.length} onClick={handleSubmitGrades}
+          <button data-module-action data-action-tone="success" type="button"
+            disabled={locked || !currentLeger.length || !draftReady || !hasUnsavedGrades} onClick={handleSaveDraft}
+            title="Simpan Draft Nilai" aria-label="Simpan Draft Nilai">
+            <i aria-hidden="true" className="fa-solid fa-floppy-disk" />
+          </button>
+          <button data-module-action data-action-tone="primary" type="button" disabled={locked || !currentLeger.length || !draftReady} onClick={handleSubmitGrades}
             title="Kirim Nilai ke Wali Kelas" aria-label="Kirim Nilai ke Wali Kelas">
             <i aria-hidden="true" className="fa-solid fa-paper-plane" />
           </button>
@@ -203,7 +259,16 @@ export default function SetorNilaiPage() {
             <i className="fa-solid fa-pen-to-square text-brand-400"></i>
             <span>Daftar Nilai Siswa {targetClassId} - Mapel: {activeMapel.name}</span>
           </div>
-          <span className="text-slate-400 font-mono text-[11px]">KKM Mapel: {activeMapel.kkm}</span>
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span role="status" className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-bold ${sent ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>
+              <i aria-hidden="true" className={`fa-solid ${sent ? 'fa-circle-check' : 'fa-clock'}`} />
+              {submissionStatus}
+            </span>
+            <span aria-live="polite" className={hasUnsavedGrades ? 'text-amber-300' : 'text-emerald-300'}>
+              {hasUnsavedGrades ? 'Perubahan belum disimpan' : Object.keys(savedGrades).length > 0 ? 'Draft tersimpan' : ''}
+            </span>
+            <span className="text-slate-400 font-mono">KKM Mapel: {activeMapel.kkm}</span>
+          </div>
         </div>
 
         <div ref={tableViewportRef} className="module-table max-h-[550px] custom-scrollbar">
@@ -238,7 +303,8 @@ export default function SetorNilaiPage() {
                       <td key={column.key} className="py-2 px-1 text-center">
                         <input type="number" min="0" max="100" aria-label={column.label + ' ' + student.nama}
                           value={gradesDraft[student.nis + ':' + column.key] ?? ''}
-                          onChange={event => handleScoreChange(student.nis + ':' + column.key, event.target.value)}
+                          disabled={locked}
+                          onChange={event => editDraftGrades({ [student.nis + ':' + column.key]: event.target.value })}
                           className="w-14 rounded-lg border border-slate-300 px-1 py-1 text-center" />
                       </td>
                     ))}
@@ -247,8 +313,9 @@ export default function SetorNilaiPage() {
                         type="number"
                         min="0"
                         max="100"
+                        disabled={locked}
                         value={val}
-                        onChange={(e) => handleScoreChange(student.nis, e.target.value)}
+                        onChange={e => editDraftGrades({ [student.nis]: e.target.value })}
                         className={`w-16 py-1 px-1 rounded-lg border text-center font-mono font-bold text-xs focus:ring-2 focus:ring-brand-500 outline-none transition ${
                           average !== '' && !isTuntas ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-300 bg-white text-slate-800'
                         }`}
@@ -289,12 +356,12 @@ export default function SetorNilaiPage() {
         key={draftKey}
         fixedTarget
         onImport={items => {
-          const imported = Object.fromEntries(items.filter(item => item.nis).flatMap(item => [
+          const studentIds = new Set(currentLeger.map(student => student.nis));
+          const imported = Object.fromEntries(items.filter(item => studentIds.has(item.nis)).flatMap(item => [
             [item.nis, item.sts ?? item.score],
             ...Object.entries(item.uhScores || {}).map(([key, value]) => [`${item.nis}:${key}`, value]),
           ]));
-          if (currentLeger.some(student => Object.hasOwn(imported, student.nis))) recordSubmission(targetClassId, selectedMapelKey);
-          setDrafts(prev => ({ ...prev, [draftKey]: { ...prev[draftKey], ...imported } }));
+          editDraftGrades(imported);
         }}
         isOpen={isDknModalOpen}
         onClose={() => setIsDknModalOpen(false)}

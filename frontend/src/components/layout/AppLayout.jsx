@@ -9,7 +9,7 @@ import LoginScreen from '../auth/LoginScreen';
 import { useApp } from '@/context/AppContext';
 
 export default function AppLayout({ children }) {
-  const { currentUser, isAuthLoaded } = useApp();
+  const { currentUser, isAuthLoaded, isPreviewOpen, previewStudent } = useApp();
 
   // Tunggu inisialisasi auth
   if (!isAuthLoaded) {
@@ -33,7 +33,10 @@ export default function AppLayout({ children }) {
 
   // Jika sudah login, tampilkan aplikasi utama
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col m-0 p-0 overflow-x-hidden">
+    <div
+      data-raport-preview={isPreviewOpen && previewStudent ? '' : undefined}
+      className="radistes-layout bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col m-0 p-0 overflow-x-hidden"
+    >
       {/* Topbar Header */}
       <Header />
 

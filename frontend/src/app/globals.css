@@ -105,13 +105,35 @@ body {
   background: #94a3b8;
 }
 
+/* Use the printable A4 width when measuring and exporting reports. */
+.raport-export {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 186mm;
+}
+
+.raport-export .print-container {
+  box-shadow: none;
+  border: none;
+  margin: 0;
+  padding: 0 1px;
+  width: 100%;
+  max-width: 100%;
+  line-height: 1.25;
+}
+
+.raport-export .raport-grades :is(th, td) {
+  padding-block: 2px;
+}
+
 /* Print Specific Rules for Raport */
 @media print {
   @page {
     size: A4 portrait;
     margin: 10mm 12mm 10mm 12mm;
   }
-  
+
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
@@ -119,7 +141,8 @@ body {
     padding: 0 !important;
   }
   
-  .no-print {
+  .no-print,
+  .raport-export {
     display: none !important;
   }
   
@@ -127,13 +150,58 @@ body {
     display: block !important;
   }
 
+  [data-raport-preview] > :not(.raport-preview-print) {
+    display: none !important;
+  }
+
+  [data-raport-preview],
+  .radistes-layout:has(.raport-print-job) {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .radistes-layout:has(.raport-print-job) > :not(main),
+  .radistes-layout:has(.raport-print-job) > main > div > :not(.radistes-content),
+  .raport-print-page:has(.raport-print-job) > :not(.raport-print-job) {
+    display: none;
+  }
+
+  .radistes-layout:has(.raport-print-job) > main {
+    padding: 0;
+  }
+
+  .raport-print-page:has(.raport-print-job) > .raport-print-job {
+    margin: 0;
+  }
+
+  [data-raport-preview] > .raport-preview-print {
+    position: static;
+    display: block;
+    overflow: visible;
+    padding: 0;
+    background: white;
+    backdrop-filter: none;
+  }
+
   .print-container {
     box-shadow: none !important;
     border: none !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 1px !important;
     width: 100% !important;
     max-width: 100% !important;
+    line-height: 1.25;
+    zoom: var(--raport-print-scale, 1);
+  }
+
+  .raport-grades :is(th, td) {
+    padding-block: 2px;
+  }
+
+  .raport-signatures {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .print-page-break {

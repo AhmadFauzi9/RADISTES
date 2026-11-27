@@ -1,6 +1,7 @@
 export default function TeacherAssignmentFields({ classes, subjects, value, onChange }) {
   const levels = [...new Set(classes.map(item => item.tingkat))].sort();
   const { mapel, classIds } = value;
+  const selectedSubject = subjects.some(subject => subject.key === mapel) ? mapel : '';
 
   function toggleClass(classId) {
     const nextClassIds = classIds.includes(classId)
@@ -16,11 +17,12 @@ export default function TeacherAssignmentFields({ classes, subjects, value, onCh
         <select
           required
           className="module-control w-full"
-          value={mapel}
+          disabled={!subjects.length}
+          value={selectedSubject}
           onChange={event => onChange({ ...value, mapel: event.target.value })}
         >
-          <option value="">Pilih Mata Pelajaran</option>
-          {subjects.map(item => <option key={item.key} value={item.key}>{item.code}. {item.name}</option>)}
+          <option value="">{subjects.length ? 'Pilih Mata Pelajaran' : 'Belum ada mapel aktif'}</option>
+          {subjects.map(item => <option key={item.key} value={item.key}>{item.short} · {item.name}</option>)}
         </select>
       </label>
 

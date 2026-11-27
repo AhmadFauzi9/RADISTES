@@ -3,9 +3,8 @@ const font = { name: 'Arial', size: 10, color: { argb: 'FF0F172A' } };
 
 export async function createExcelTemplate(ExcelJS, {
   rows, sheetName, widths, headerRow = 0, textColumns = [], inputColumns = [],
-  titleRows = [], fullWidthRows = [], merges = [], filter = true,
+  titleRows = [], fullWidthRows = [], merges = [], filter = true, workbook = new ExcelJS.Workbook(),
 }) {
-  const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(sheetName);
   sheet.columns = widths.map(width => ({ width }));
   if (filter && rows.length > headerRow + 1) {
@@ -55,17 +54,17 @@ export async function createExcelTemplate(ExcelJS, {
   return workbook;
 }
 
-export async function downloadExcelTemplate(options, showToast) {
+export async function downloadExcelWorkbook(fileName, createWorkbook, showToast) {
   try {
     const { default: ExcelJS } = await import('exceljs');
-    const workbook = await createExcelTemplate(ExcelJS, options);
+    const workbook = await createWorkbook(ExcelJS);
     const buffer = await workbook.xlsx.writeBuffer();
     const url = URL.createObjectURL(new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = options.fileName;
+    link.download = fileName;
     document.body.appendChild(link);
     try {
       link.click();
@@ -76,7 +75,11 @@ export async function downloadExcelTemplate(options, showToast) {
     return true;
   } catch (error) {
     console.error(error);
-    showToast('Template Excel gagal dibuat.', 'warning');
+    showToast('File Excel gagal dibuat.', 'warning');
     return false;
   }
+}
+
+export function downloadExcelTemplate(options, showToast) {
+  return downloadExcelWorkbook(options.fileName, ExcelJS => createExcelTemplate(ExcelJS, options), showToast);
 }

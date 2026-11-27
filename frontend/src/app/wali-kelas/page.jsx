@@ -1,8 +1,9 @@
 'use client';
 
 import ModuleHeading from '@/components/common/ModuleHeading';
+import ModulePagination from '@/components/common/ModulePagination';
 import ModuleSearch from '@/components/common/ModuleSearch';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import ImportWaliKelasModal from '@/components/wali/ImportWaliKelasModal';
 import * as XLSX from 'xlsx';
@@ -19,6 +20,9 @@ export default function WaliKelasPage() {
   const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const tableViewportRef = useRef(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -50,10 +54,18 @@ export default function WaliKelasPage() {
     if (search.trim() && ![c.nama, c.wali, c.telp].join(' ').toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
   });
+  const safePage = Math.min(currentPage, Math.max(1, Math.ceil(filteredClasses.length / pageSize)));
+  const startIndex = (safePage - 1) * pageSize;
+  const pageClasses = filteredClasses.slice(startIndex, startIndex + pageSize);
   const targetClass = allClasses.find(c => c.id === editingClass?.targetClassId);
   const targetLevels = [...new Set(allClasses.map(c => c.tingkat))].sort();
   const targetSections = allClasses.filter(c => c.tingkat === editingClass?.targetLevel);
   const isMovingAssignment = targetClass && targetClass.id !== editingClass.id;
+
+  function changePage(page) {
+    setCurrentPage(page);
+    if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
+  }
 
   const handleSaveEditWali = (e) => {
     e.preventDefault();
@@ -69,7 +81,7 @@ export default function WaliKelasPage() {
     showToast(`Penugasan Wali Kelas ${classId} berhasil dihapus.`, 'info');
   };
 
-  const visibleIds = filteredClasses.map(c => c.id);
+  const visibleIds = pageClasses.map(c => c.id);
   const isAllVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
 
   const toggleSelectAll = () => {
@@ -149,6 +161,7 @@ export default function WaliKelasPage() {
             onChange={event => {
               setLevelFilter(event.target.value);
               setSectionFilter('');
+              changePage(1);
             }}
             className="module-control"
           >
@@ -162,6 +175,7 @@ export default function WaliKelasPage() {
             value={sectionFilter}
             onChange={event => {
               setSectionFilter(event.target.value);
+              changePage(1);
             }}
             className="module-control"
           >
@@ -176,7 +190,10 @@ export default function WaliKelasPage() {
             aria-label="Cari wali kelas"
             placeholder="Cari kelas, nama wali, atau no. telp..."
             value={search}
-            onChange={event => setSearch(event.target.value)}
+            onChange={event => {
+              setSearch(event.target.value);
+              changePage(1);
+            }}
           />
         </div>
 
@@ -247,21 +264,22 @@ export default function WaliKelasPage() {
         <div className="p-3 bg-slate-900 text-white flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
             <i className="fa-solid fa-user-tie text-brand-400"></i>
-            <span>Daftar Penugasan Wali Kelas ({filteredClasses.length} Kelas Ditampilkan)</span>
+            <span>Daftar Penugasan Wali Kelas ({filteredClasses.length} Kelas)</span>
           </div>
           <span className="text-slate-400 text-[11px] font-mono">
             *Klik tombol edit untuk mengubah guru yang ditugaskan
           </span>
         </div>
 
-        <div className="overflow-x-auto custom-scrollbar max-h-[560px]">
+        <div ref={tableViewportRef} className="overflow-x-auto custom-scrollbar max-h-[560px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold border-b border-slate-300 sticky top-0 z-10">
               <tr>
                 <th className="py-2.5 px-3 text-center w-10">
                   <input
                     type="checkbox"
-                    aria-label="Pilih semua wali kelas"
+                    aria-label="Pilih semua wali kelas di halaman ini"
+                    disabled={!visibleIds.length}
                     checked={isAllVisibleSelected}
                     onChange={toggleSelectAll}
                     className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
@@ -282,7 +300,7 @@ export default function WaliKelasPage() {
                     Tidak ada kelas yang sesuai dengan filter.
                   </td>
                 </tr>
-              ) : filteredClasses.map((cls, idx) => (
+              ) : pageClasses.map((cls, idx) => (
                 <tr key={cls.id} className={`hover:bg-brand-50/40 transition text-slate-700 ${deletingId === cls.id ? 'bg-rose-50' : selectedIds.includes(cls.id) ? 'bg-brand-50/30' : ''}`}>
                   <td className="py-2 px-3 text-center">
                     <input
@@ -293,7 +311,7 @@ export default function WaliKelasPage() {
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
                     />
                   </td>
-                  <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{idx + 1}</td>
+                  <td className="py-2 px-3 text-center font-mono font-semibold text-slate-500">{startIndex + idx + 1}</td>
                   <td className="py-2 px-3 text-center font-black text-brand-700 bg-brand-50/50">{cls.nama}</td>
                   <td className="py-2 px-4 font-bold text-slate-800">
                     <div className="flex items-center gap-1.5">
@@ -364,6 +382,17 @@ export default function WaliKelasPage() {
             </tbody>
           </table>
         </div>
+        <ModulePagination
+          totalItems={filteredClasses.length}
+          pageSize={pageSize}
+          onPageSizeChange={size => {
+            setPageSize(size);
+            changePage(1);
+          }}
+          currentPage={safePage}
+          onPageChange={changePage}
+          itemLabel="kelas"
+        />
       </div>
 
       {/* Modal Edit Penugasan Wali Kelas */}
