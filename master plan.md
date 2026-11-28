@@ -1,101 +1,130 @@
-# Master Plan RADISTES
+# Master Plan Backend Go RADISTES
 
-Sebelum menghubungkan UI ke Go, gunakan [Workflow RADISTES](docs/workflow-radistes.md) untuk mengikuti alur tiap portal dan [Dokumentasi Perilaku Frontend](docs/perilaku-frontend-radistes.md) untuk memeriksa aturan nilai, batas prototipe, serta skenario penerimaan backend.
+Bangun backend Go untuk menjalankan alur RADISTES yang sudah disetujui. Selesaikan RADISTES sebagai aplikasi mandiri terlebih dahulu. Target pertama adalah **satu rombel dan satu periode STS**, dari penyiapan data sampai cetak raport A4.
 
-## 1. Tujuan dan keputusan arsitektur
+Gunakan dokumen ini untuk menentukan pekerjaan backend. Untuk mengetahui apa yang dilakukan pengguna dan hasil yang harus terlihat, baca panduan frontend. [Alur Penggunaan RADISTES](docs/workflow-radistes.md) · [Cara Kerja Frontend dan Panduan Uji](docs/perilaku-frontend-radistes.md)
 
-Selesaikan **RADISTES terlebih dahulu** sebagai aplikasi mandiri. Gunakan **Next.js** untuk frontend dan **Go** untuk API, autentikasi, aturan penilaian, serta penyimpanan. Gunakan **MySQL atau MariaDB** sebagai database awal agar sesuai dengan lingkungan XAMPP dan skema SQL yang sudah ada sebagai referensi. Pilih satu mesin dan versi untuk pengembangan dan pengujian migrasi sebelum menulis migrasi produksi.
+## 1. Kunci tampilan dan perilaku frontend
 
-Target pertama adalah alur utuh untuk satu rombel. Admin menyiapkan data siswa dan penugasan, guru mengirim nilai, wali kelas memeriksa Leger, kemudian admin atau wali kelas menghasilkan raport sesuai hak akses.
+**Acuan frontend** adalah commit Git `5ba399b2af6671929c16e09043408645287e6a60`. Saat menguji integrasi, bandingkan hasilnya dengan commit ini dan panduan frontend. Jika ada perbedaan antara panduan dan aplikasi, catat perbedaannya dan periksa kode pada commit acuan.
 
-Setelah SI-MATSAMA siap, jadikan **SI-MATSAMA sebagai sumber utama identitas dan biodata siswa**, beserta data rombel jika layanan dan riwayatnya tersedia. RADISTES tetap mengelola penilaian dan raport. Menu Raport dan masuk melalui akun SI-MATSAMA dapat ditambahkan setelah kedua aplikasi siap bertukar data. Awali integrasi melalui API agar masing-masing aplikasi dapat mengelola skemanya sendiri. [Panduan kepemilikan data layanan](https://learn.microsoft.com/azure/architecture/microservices/design/data-considerations)
+Bagian yang dilindungi meliputi tampilan halaman, menu dan rute, nama dan urutan tombol, warna, tabel, filter, pagination, modal, pesan dan status, hak akses yang terlihat, aturan nilai, format Excel, serta pratinjau, cetak, dan unduh raport. Perubahan internal untuk membaca API, mengirim data, atau memetakan respons boleh dilakukan selama cara pengguna memakai aplikasi dan hasil yang diharapkan tetap sama.
 
-```text
-Tahap awal   Browser → Next.js → API Go RADISTES → Database RADISTES
-Tahap lanjut                         │
-                                     └→ API SI-MATSAMA untuk data induk
-```
+### Jika frontend perlu berubah
 
-Sajikan UI dan API melalui alamat aplikasi yang sama bila praktis. Reverse proxy atau rewrite Next.js dapat meneruskan `/api/v1` ke Go. Go memverifikasi sesi dan kewenangan untuk setiap operasi. [Dokumentasi rewrite Next.js 14](https://nextjs.org/docs/14/app/api-reference/next-config-js/rewrites)
+1. Catat halaman dan peran yang terdampak. Tunjukkan perilaku saat ini, perubahan yang diusulkan, dan alasan backend membutuhkannya.
+2. Jelaskan dampaknya dengan contoh langkah, tangkapan layar, atau contoh data. Jika memungkinkan, jelaskan juga cara mempertahankan alur yang ada.
+3. Minta persetujuan pemilik RADISTES **sebelum** mengubah tampilan atau perilaku tersebut. Lanjutkan bagian backend yang mandiri sambil menunggu jawaban.
+4. Setelah disetujui, catat keputusan di perubahan atau pull request. Perbarui panduan dan skenario uji untuk perubahan tersebut. Jadikan commit hasil perubahan yang disetujui sebagai acuan berikutnya.
 
-## 2. Titik awal repositori
+## 2. Tetapkan batas versi pertama
 
-| Bagian | Kondisi saat rencana disusun |
+| Masuk ruang lingkup | Dikerjakan setelah versi mandiri siap atau lewat persetujuan terpisah |
 | --- | --- |
-| [Frontend Next.js](frontend/package.json) | Tampilan dan alur portal sudah tersedia sebagai dasar implementasi API. |
-| [Gateway PHP](backend/Router.php) | Endpoint status dan respons placeholder. Gunakan skema PHP sebagai bahan audit saat mulai membangun layanan Go. |
-| [Skema lama](backend/database/schema.sql) | Tabel `siswa` memiliki satu `kelas_id`. Tabel nilai merujuk langsung ke siswa dengan penghapusan berantai. Migrasi Go perlu memodelkan riwayat rombel dan menjaga riwayat nilai. |
-| [AppContext](frontend/src/context/AppContext.jsx) dan [penyimpanan draft](frontend/src/lib/gradeDraftStorage.js) | Login masih simulasi. Nilai Leger dan status setoran berada di memori aplikasi. Sebagian pengaturan, biodata, penugasan, tanda tangan, dan draft disimpan di browser. Mulai dengan inventaris data yang perlu dipindahkan ke server. |
-| [Catatan fitur](Catatan.txt) | Gunakan bersama tampilan terkini untuk memeriksa perilaku yang harus dibawa ke backend. |
+| API Go, sesi dan hak akses untuk Admin, Wali Kelas, dan Guru Mapel. | Integrasi akun dan data siswa dengan SI-MATSAMA. |
+| Data siswa, rombel, periode, mapel, dan penugasan yang dibutuhkan oleh alur saat ini. | Menu, fitur, atau peran baru di frontend. |
+| Draft, impor, kirim, koreksi, peringkat, dan penguncian Leger. | Perubahan rumus, kewajiban baru untuk mengunci Leger, atau pembatasan berdasarkan tenggat. |
+| Pengaturan raport, logo, tanda tangan, dan data yang dibutuhkan template A4 saat ini. | Tanda tangan elektronik, layanan cetak PDF baru, dan aturan penerbitan resmi yang belum disepakati. |
+| Migrasi data uji, verifikasi satu rombel, dan persiapan migrasi data sekolah. | Migrasi data sekolah secara langsung sebelum pencocokan dan pemulihan selesai diuji. |
 
-Susunan kode yang diusulkan menempatkan layanan baru di `backend-go/` selama peralihan.
+Jika muncul usulan fitur di luar tabel, catat di daftar pekerjaan lanjutan. Kerjakan hanya setelah pemilik menyetujui perubahan ruang lingkup.
+
+## 3. Gunakan satu layanan Go
+
+1. Letakkan layanan Go baru di `backend-go/`. Gunakan satu API dengan rute `/api/v1`.
+2. Gunakan satu database SQL lokal yang sesuai lingkungan XAMPP. Periksa apakah lingkungan memakai MySQL atau MariaDB, catat mesin dan versinya, lalu pakai pilihan itu untuk menguji migrasi. Pilihan mesin produksi bisa ditetapkan setelah lingkungan produksi diketahui.
+3. Pertahankan Next.js untuk portal, formulir, template Excel, dan render raport A4. Go mengelola sesi, izin, validasi, transaksi, perhitungan resmi, dan penyimpanan. Hubungkan melalui asal yang sama bila praktis, misalnya dengan meneruskan `/api/v1` dari Next.js ke Go.
+4. Pakai [skema SQL lama](backend/database/schema.sql) dan [gateway PHP](backend/Router.php) sebagai bahan audit. Skema lama memiliki satu kelas per siswa dan penghapusan berantai pada nilai. Buat migrasi Go berversi dan uji pada database kosong sebelum memasukkan data lama.
+5. Pakai data contoh untuk pengembangan. Petakan data di memori frontend dan penyimpanan browser saat merencanakan migrasi. Simpan pengaturan koneksi di konfigurasi lingkungan dan pisahkan dari repository. [Sumber data frontend](frontend/src/context/AppContext.jsx) · [Penyimpanan draft](frontend/src/lib/gradeDraftStorage.js)
+
+Struktur awal yang disarankan. Tambahkan modul saat tahap terkait dimulai.
 
 ```text
-frontend/                  UI, formulir, impor dan ekspor
 backend-go/
-  cmd/radistes/            konfigurasi dan startup API
-  internal/httpapi/        route, sesi, validasi input, dan respons
-  internal/siswa/          data induk siswa dan pencarian rombel
-  internal/penilaian/      penugasan, draft, setoran, dan Leger
-  internal/raport/         penguncian, penerbitan, dan metadata raport
-  migrations/             migrasi SQL dengan nomor versi
+  cmd/radistes/       Menjalankan API dan membaca konfigurasi
+  internal/httpapi/   Rute, sesi, dan respons HTTP
+  internal/siswa/     Siswa, rombel, dan riwayat keanggotaan
+  internal/penilaian/ Mapel, penugasan, draft, setoran, dan Leger
+  internal/raport/    Metadata dan aset raport
+  migrations/        Perubahan database dengan nomor versi
 ```
 
-Mulai dengan satu layanan Go. Definisikan kontrak baca data siswa di modul siswa, misalnya `AmbilSiswa(id)` dan `DaftarSiswaRombel(rombelID, periode)`. Implementasi awal membaca SQL lokal. Tambahkan adaptor SI-MATSAMA saat kontrak API dan izin aksesnya tersedia.
+## 4. Simpan data dengan ID yang tetap
 
-## 3. Model data awal
-
-Nama tabel berikut adalah usulan untuk RADISTES. Nama, tipe ID, autentikasi, dan skema SI-MATSAMA perlu diperiksa sebelum pemetaan final.
-
-| Entitas | Relasi dan aturan |
+| Data | Aturan utama |
 | --- | --- |
-| `siswa` | Gunakan `id` internal yang stabil. Simpan NIS dan NISN sebagai teks agar nol di awal terjaga. Gunakan keduanya untuk pencarian dan pencocokan awal. Biodata seperti TTL dan nama orang tua berada pada data induk. |
-| `tahun_ajaran`, `rombel`, `keanggotaan_rombel` | Rombel mempunyai ID dan terkait tahun ajaran. Keanggotaan menghubungkan siswa dengan rombel dan menyimpan semester atau masa berlaku. Kode seperti `7A` adalah label yang bisa berulang antartahun. Pertahankan catatan lama saat siswa pindah atau naik kelas. |
-| `guru`, `akun`, `penugasan_wali`, `penugasan_mapel` | Pisahkan identitas guru dari akun. Wali kelas merujuk ke rombel dan periode. Penugasan mapel menghubungkan guru, mapel, rombel, dan periode, dengan satu baris untuk setiap kombinasi unik. |
-| `mata_pelajaran`, `mapel_periode` | Simpan ID, kode, nama, induk, status aktif, dan urutan. Rekam susunan mapel yang berlaku pada periode penilaian agar perubahan katalog berikutnya dapat diterapkan pada periode yang dipilih. |
-| `periode_penilaian` | Simpan tahun ajaran, semester, jenis ujian seperti STS, tenggat setor, dan tanggal pembagian. Kaitkan data penilaian dengan ID periode ini. |
-| `setoran_nilai`, `setoran_nilai_detail`, `nilai_leger` | Simpan draft, versi kirim, dan sumber nilai. Pada Leger, gunakan satu nilai akhir per kombinasi siswa, mapel, dan periode, serta simpan rujukan rombel tempat nilai tersebut dicatat. |
-| `nilai_pendukung`, `raport_terbit` | Simpan absensi, akhlak, kegiatan, dan catatan per siswa dan periode. Saat raport diterbitkan, simpan data yang digunakan atau PDF final beserta versi agar hasil lama dapat diakses ketika biodata, mapel, atau tanda tangan kemudian berubah. |
-| `pengaturan_raport`, `aset_raport` | Simpan kop, tanggal, NIPY, dan rujukan berkas logo atau tanda tangan di server. Kaitkan tanda tangan wali dengan penugasan dan periode. |
-| `identitas_eksternal` | Siapkan migrasi tabel ini saat integrasi dimulai. Petakan ID lokal ke `sistem_asal` dan `id_eksternal`. Terapkan keunikan pasangan sistem dan ID eksternal serta satu pemetaan aktif per siswa untuk setiap sistem. |
+| Siswa | Gunakan ID internal. Simpan NIS dan NISN sebagai teks agar nol di awal tetap ada. Simpan tempat lahir, tanggal lahir, serta nama orang tua sebagai biodata siswa. |
+| Tahun ajaran, rombel, dan keanggotaan | Rombel punya ID. Nama seperti `8A` dapat dipakai kembali pada tahun berikutnya. Keanggotaan menghubungkan siswa dengan rombel dan masa berlaku. Riwayat tetap tersimpan saat siswa pindah kelas. |
+| Akun, guru, dan penugasan | Pisahkan akun masuk dari identitas guru. Cakupan Wali Kelas berasal dari penugasan wali. Cakupan Setor Nilai berasal dari penugasan guru, mapel, rombel, dan periode. Satu guru dapat memiliki beberapa penugasan. |
+| Mapel dan periode STS | Gunakan ID mapel yang tetap. Simpan kode, nama, induk, status aktif, dan urutan untuk periode yang digunakan. Nilai mapel yang dinonaktifkan tetap tersimpan. Simpan semester, tenggat, serta tanggal pembagian di periode penilaian. |
+| Draft, setoran, dan Leger | Pisahkan isian yang sedang dikerjakan, versi yang dikirim, dan nilai akhir di Leger. Catat periode, rombel, mapel, serta asal nilai. Tentukan cakupan kunci unik berdasarkan keanggotaan dan periode agar siswa pindahan tetap memiliki riwayat. |
+| Data pendukung dan aset raport | Kaitkan absensi, akhlak, ekskul, dan catatan dengan siswa serta periode. Simpan logo, tanda tangan, dan metadata kepala madrasah serta wali. Kaitkan tanda tangan wali dengan penugasan dan periode. Pertahankan resolusi asli unggahan. |
 
-Gunakan foreign key lokal untuk relasi dalam RADISTES. Untuk arsip nilai, nonaktifkan data induk atau gunakan aturan `RESTRICT` saat masih memiliki riwayat. Kendalikan kasus pindah rombel dalam satu semester dengan masa berlaku keanggotaan dan keputusan kelas mana yang menerbitkan raport. [Dokumentasi foreign key MySQL](https://dev.mysql.com/doc/refman/8.0/en/create-table-foreign-keys.html)
+Penghapusan atau penonaktifan data induk harus menjaga riwayat nilai. Putuskan cara memperlakukan perpindahan rombel dalam satu semester sebelum menerbitkan raport resmi. Penyimpanan versi raport terbit disiapkan saat aturan penerbitannya sudah disetujui.
 
-## 4. Kontrak API dan aturan penilaian
+## 5. Tentukan kontrak API per tahap
 
-| API usulan | Tanggung jawab |
+Nama rute di bawah adalah usulan. Sebelum menghubungkan sebuah halaman, catat permintaan, respons, hak akses, dan contoh kesalahan yang dibutuhkan UI. Gunakan istilah dan hasil yang sama dengan panduan frontend.
+
+| Bagian | Kontrak awal dan hasil yang harus dijaga |
 | --- | --- |
-| `POST /api/v1/auth/login`, `GET /api/v1/me` | Membuat sesi dan mengembalikan profil, role, serta penugasan yang berlaku. Gunakan akun server dengan sandi yang di-hash dan cookie sesi yang aman. |
-| `GET /api/v1/rombel/{id}/siswa?periode_id=...` | Mengembalikan daftar siswa berdasarkan riwayat rombel dan periode. |
-| `PATCH /api/v1/siswa/{id}/biodata`, `POST /api/v1/siswa/biodata/impor` | Edit manual untuk admin atau wali yang bertugas. Impor massal khusus admin mencocokkan siswa terdaftar, memvalidasi semua baris, dan mempertahankan nilai lama pada kolom kosong. |
-| `GET /api/v1/mapel?periode_id=...`, `GET /api/v1/penugasan?periode_id=...` | Memuat mapel aktif berurutan dan penugasan untuk filter, modal, dan template impor. |
-| `PUT /api/v1/penugasan/{id}/draft`, `POST /api/v1/penugasan/{id}/setoran` | Menyimpan draft dan mengirim versi yang telah divalidasi. |
-| `GET /api/v1/rombel/{id}/leger?periode_id=...` | Mengembalikan kolom mapel, nilai, status kelengkapan, total, rata-rata, dan peringkat. |
-| `POST /api/v1/rombel/{id}/leger/kunci`, `GET /api/v1/raport/{id}` | Mengunci Leger untuk periode yang dipilih dan mengambil data raport yang dapat diakses akun tersebut. |
+| Fondasi | `GET /api/v1/health` untuk memeriksa layanan. `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, dan `GET /api/v1/me` untuk sesi dan profil. Hash sandi, kelola sesi di server, dan periksa izin pada tiap operasi. Uji terlebih dahulu lewat API sebelum menyambungkan layar login. |
+| Siswa dan biodata | `GET /api/v1/rombel/{id}/siswa?periode_id=...` dan `PATCH /api/v1/siswa/{id}/biodata`. Admin mengelola lintas rombel, wali mendapat akses biodata di rombel asuh. Impor biodata khusus Admin mencocokkan NIS dan rombel, menjaga isian lama pada sel kosong, dan membatalkan seluruh batch jika ada baris salah. |
+| Data master | Rute baca dan ubah periode, mapel, rombel, penugasan wali, serta penugasan guru. Pertahankan urutan mapel dan aturan induk dengan submapel, termasuk PAI dan MULOK. Untuk impor, server memvalidasi ulang rujukan dan melaporkan baris bermasalah sesuai alur masing-masing file. |
+| Draft dan setoran | `PUT /api/v1/penugasan/{id}/draft` dan `POST /api/v1/penugasan/{id}/setoran`. Draft bisa disimpan dan dilanjutkan. Saat kirim berhasil, simpan versi setoran serta nilai Leger dalam satu transaksi. Klik ganda atau pengulangan permintaan yang sama menghasilkan satu versi kiriman. |
+| Leger | `GET /api/v1/rombel/{id}/leger?periode_id=...`, operasi koreksi, impor DKN langsung khusus Admin, data pendukung, dan kunci atau buka kunci. Cek izin dan status kunci di server. Uji keadaan ketika setoran dan penguncian dilakukan bersamaan. |
+| Raport | Rute pengaturan, unggah aset, dan baca data raport berdasarkan siswa serta periode. Next.js tetap menghasilkan pratinjau, cetak, dan unduhan memakai template yang sama. Periksa satu siswa dan hasil filter massal. [Template A4](frontend/src/components/raport/PrintableRaport.jsx) |
 
-- **Hak akses.** Admin mengelola penugasan dan pengaturan, wali kelas mengelola rombel yang ditugaskan, dan guru mapel menyetor nilai untuk kombinasi rombel, mapel, dan periode yang ditugaskan. Akses ditentukan dari sesi dan data penugasan di server.
-- **Draft dan kirim.** Menyimpan draft mempertahankan status belum dikirim. Saat berhasil dikirim, simpan versi setoran dan nilai Leger dalam satu transaksi. Perubahan setelah setor menandai revisi yang perlu dikirim ulang. Gunakan identitas kiriman atau versi draft agar retry dan klik ganda menghasilkan satu kiriman. Uji persaingan antara setor dan penguncian. [Transaksi database di Go](https://go.dev/doc/database/execute-transactions)
-- **Nilai.** Pertahankan UH 1–5 dan STS, bedakan sel kosong dari nol, validasi rentang 0–100, dan bulatkan sesuai aturan saat ini. Leger menghitung jumlah, rata-rata, dan peringkat dari mapel aktif. Pertahankan pilihan eksklusif antara induk dan submapel, termasuk PAI dan MULOK, serta urutan mapel dari pengaturan periode. [Perhitungan DKN](frontend/src/lib/dknScores.js) · [Katalog mapel](frontend/src/lib/subjectCatalog.js) · [Perhitungan Leger](frontend/src/lib/masterData.js)
-- **Impor.** Validasi data Excel kembali di Go terhadap daftar rombel, mapel aktif, dan penugasan terbaru. Kembalikan nomor baris serta alasan jika ada data salah. Simpan batch yang valid dalam transaksi. [Template penugasan](frontend/src/lib/teacherAssignmentWorkbook.js)
-- **Raport.** Gunakan template A4 yang sudah ada untuk tahap awal. Suplai data dari API Go. Periksa cetak satu siswa dan cetak massal, termasuk catatan panjang serta blok tanda tangan dan nama orang tua. [Template raport](frontend/src/components/raport/PrintableRaport.jsx)
+### Aturan yang wajib sama dengan frontend
 
-## 5. Tahapan implementasi dan kriteria selesai
+1. **Setor Nilai.** STS wajib saat kirim dan UH 1–5 opsional. Nilai valid 0–100 dan nol dianggap terisi. Rata-rata DKN memakai STS dan UH yang terisi, lalu dibulatkan. Semua siswa dalam rombel diperiksa, termasuk yang ada di halaman tabel lain.
+2. **Status kirim.** Simpan draft belum mengubah nilai Leger. Edit setelah kirim menghasilkan **Perubahan belum dikirim**. Setelah kirim ulang berhasil, Leger memakai nilai terbaru. Pertahankan ringkasan status yang terlihat pada tiap portal.
+3. **Leger.** Jumlah, rata-rata, kelengkapan, dan peringkat mengikuti mapel aktif dan aturan pembulatan saat ini. Cocokkan hasil Go dengan data uji dari frontend, termasuk skor 0, sel kosong, nilai desimal, dan siswa dengan nilai seri.
+4. **Impor.** Bedakan impor DKN ke draft guru dari impor DKN langsung ke Leger oleh Admin. Validasi data yang diterima di Go walaupun file Excel dibaca di frontend. Pertahankan format template dan petunjuk yang sudah digunakan.
+5. **Raport.** Gunakan nama orang tua dari biodata, pengaturan periode, kop, dan tanda tangan sesuai penugasan. Pertahankan A4 dengan satu halaman per siswa, pratinjau yang sama, dan keluaran sesuai peran. Periksa catatan panjang serta ketajaman tanda tangan.
 
-| Tahap | Pekerjaan | Lulus jika |
+Rujukan kode. [Perhitungan DKN](frontend/src/lib/dknScores.js) · [Perhitungan Leger](frontend/src/lib/masterData.js) · [Katalog mapel](frontend/src/lib/subjectCatalog.js) · [Template penugasan](frontend/src/lib/teacherAssignmentWorkbook.js)
+
+## 6. Kerjakan dan selesaikan satu tahap sebelum memperluas pekerjaan
+
+| Tahap | Langkah kerja | Bukti tahap selesai |
 | --- | --- | --- |
-| 1. Fondasi API | Buat layanan Go, migrasi SQL, data uji satu rombel, sesi server, dan endpoint baca siswa. | Admin dapat masuk dan melihat data dari database. Permintaan tanpa hak akses ditolak. |
-| 2. Data induk dan penugasan | Hubungkan Data Siswa, pengaturan periode, Mata Pelajaran, Wali Kelas, dan Guru Mapel ke API. | Perubahan terlihat setelah muat ulang dan dari browser lain. Penugasan beberapa rombel serta urutan mapel terbaca konsisten. |
-| 3. Penilaian | Hubungkan draft, impor, setor, Leger, dan penguncian. | Guru menyetor satu kelas dan wali melihat hasilnya dari sesi lain. Uji revisi, kirim ulang, tab bersamaan, nilai kosong, dan kelas terkunci. |
-| 4. Raport | Pindahkan metadata, biodata yang dipakai, logo, serta tanda tangan ke server. Hubungkan preview dan unduh. | Admin melihat TTD yang diunggah wali dari perangkat lain. PDF A4 memuat satu halaman per siswa dan hasil terbit dapat diambil kembali. |
-| 5. Migrasi dan uji sekolah | Inventaris data demo dan data nyata dari browser atau Excel. Petakan data, jalankan simulasi impor, dan siapkan cadangan basis data. | Jumlah siswa, penugasan, nilai, dan raport cocok dengan sumber. Tinjau konflik serta uji pemulihan cadangan sebelum beralih. |
-| 6. Integrasi SI-MATSAMA | Periksa skema dan API yang tersedia. Mulai dengan baca satu rombel, pemetaan ID, dan satu arah kepemilikan biodata. Tambahkan integrasi login dan menu setelah data cocok. | Siswa duplikat ditangani, nilai lama tetap terhubung, dan siswa yang naik kelas masih dapat membuka raport sebelumnya. |
+| 1. Fondasi Go | Buat modul Go, konfigurasi, rute kesehatan, migrasi awal, dan data uji satu rombel. Buat sesi server dan endpoint baca siswa sesuai izin. | Migrasi berjalan di database kosong. Uji API membuktikan data siswa terbaca dan permintaan tanpa izin ditolak. Frontend masih memakai commit acuan. |
+| 2. Data induk | Mulai dari menghubungkan Data Siswa. Lanjutkan biodata, periode, katalog mapel, penugasan, dan impor sesuai urutan penggunaan. | Admin dan wali melihat data yang sesuai dari sesi berbeda. Data bertahan setelah muat ulang. Tampilan dan cara memakai halaman sesuai acuan. |
+| 3. Penilaian | Hubungkan draft, kirim, status Admin, Leger, dan penguncian. Uji transaksi dan pengulangan permintaan. | Guru mengirim nilai dan wali memeriksanya dari sesi lain. Revisi, nilai kosong, nol, peringkat, dan kelas terkunci lulus uji. |
+| 4. Raport | Hubungkan metadata, biodata, dan aset ke template. Uji pratinjau, unduh, dan cetak. | Raport satu siswa dan massal menghasilkan satu halaman A4 per siswa. Admin melihat tanda tangan wali dari sesi lain, dan dokumen mengikuti template acuan. |
+| 5. Uji pemakaian sekolah | Audit data nyata, coba migrasi pada salinan, cocokkan hasil, lalu uji cadangan dan pemulihan sebelum peralihan. | Jumlah siswa, penugasan, nilai, dan raport cocok dengan sumber. Data dapat dipulihkan dan hasil uji satu rombel diterima. |
 
-Pekerjaan pertama yang dapat langsung dimulai adalah migrasi awal Go untuk `siswa`, `tahun_ajaran`, `rombel`, dan `keanggotaan_rombel`, lalu endpoint baca satu rombel yang dipakai halaman Data Siswa. Untuk setiap tahap, uji logika dengan `go test ./...` dan uji alur terkait di browser. Ikuti arahan proyek untuk melewati `pnpm build` sampai build diminta.
+### Mulai dari satu pekerjaan
 
-## 6. Prosedur penggabungan data siswa
+1. Siapkan `backend-go/` dan endpoint `GET /api/v1/health`.
+2. Buat migrasi awal untuk tahun ajaran, rombel, siswa, dan keanggotaan. Isi data sintetis satu rombel.
+3. Tambahkan sesi dan endpoint baca siswa yang terlindungi. Uji hak baca Admin, Wali Kelas yang bertugas, dan akun di luar rombel.
+4. Setelah tahap ini lulus, sambungkan Data Siswa melalui adaptor API tanpa mengubah komponen tampilannya. Uji dari dua sesi sebelum lanjut ke impor dan penugasan.
 
-1. **Audit SI-MATSAMA.** Pastikan tipe ID, cakupan keunikan NIS/NISN, riwayat rombel, data orang tua, status siswa, dan metode otorisasi. Tentukan data yang dapat dibaca dan siapa yang boleh mengoreksi biodata.
-2. **Cocokkan data sebelum beralih.** Gunakan NISN bila tersedia dan unik, lalu NIS dalam cakupan madrasah. Jika keduanya kosong atau hasilnya meragukan, cocokkan nama dan tanggal lahir secara manual. Simpan daftar padanan dan konflik sebelum menulis data produksi.
-3. **Pertahankan relasi nilai.** Sebagai contoh, petakan siswa lokal `125` ke ID SI-MATSAMA `842`. Nilai dan raport tetap merujuk ke ID lokal RADISTES. Adaptor menggunakan pemetaan itu untuk mengambil biodata resmi. Jika kedua aplikasi nanti memakai skema terintegrasi, migrasikan foreign key setelah seluruh padanan tervalidasi.
-4. **Alihkan pengelolaan biodata.** Setelah perbandingan satu rombel lulus, jadikan SI-MATSAMA sumber biodata. Jika form edit tetap tersedia di RADISTES, kirim koreksi melalui API SI-MATSAMA dengan otorisasi yang disepakati. Data minimum yang diperlukan untuk riwayat raport disimpan bersama versi raport.
-5. **Siapkan peralihan dan pemulihan.** Cadangkan data dan tabel pemetaan sebelum perubahan. Uji pertukaran data saat API SI-MATSAMA lambat atau tidak dapat diakses. Raport yang sudah terbit tetap dapat diakses dari arsip RADISTES. Jika hasil pencocokan bermasalah, kembalikan sumber baca ke penyimpanan lokal sampai pemetaan selesai diperbaiki.
+### Pemeriksaan sebelum menutup tiap tahap
+
+1. Jalankan `go test ./...` dan uji migrasi serta API yang berubah. Untuk perubahan integrasi, uji juga alur browser per peran. Jalankan `pnpm build` hanya jika diminta.
+2. Bandingkan halaman terkait dengan commit acuan dalam kondisi data yang setara. Periksa nama tombol, posisi, pesan, status, hasil perhitungan, dan hasil berkas sesuai alur terkait.
+3. Catat hasil uji, keputusan pemilik, dan bagian yang masih tertunda. Jika ada perubahan tampilan atau perilaku yang belum disetujui, selesaikan prosedur pada bagian 1 sebelum memasukkannya.
+
+## 7. Pisahkan keputusan produk dari pekerjaan backend
+
+Hal berikut perlu dikonfirmasi sebelum mengubah perilaku yang sudah terlihat oleh pengguna. Pengembangan teknis yang tidak bergantung pada keputusan ini bisa tetap berjalan.
+
+| Keputusan | Acuan selama belum ada keputusan baru |
+| --- | --- |
+| Kapan sandi wajib dan bagaimana pesan gagal masuk tampil | Uji autentikasi nyata melalui API. Mintakan persetujuan sebelum mengubah cara atau pesan masuk di frontend demo. |
+| Apakah tenggat harus menolak kiriman | Tenggat tampil sebagai pengingat. |
+| Apakah Leger wajib lengkap sebelum dikunci | Frontend dapat mengunci sebelum lengkap. Gunakan petunjuk verifikasi yang ada. |
+| Siapa yang boleh membuka kunci, dan kapan raport resmi terbit | Pertahankan akses dan alur saat ini. Pratinjau dan cetak tersedia sebelum penguncian. Terbit resmi dan arsip versi ditetapkan terpisah. |
+| Bagaimana tombol tambah atau hapus menangani data sekolah | Tambah Siswa masih berupa contoh. Sebelum mengubah aksi yang terlihat, sepakati cara menambah, mengakhiri penugasan, atau menonaktifkan keanggotaan dengan riwayat tetap tersimpan. |
+
+## 8. Siapkan penggabungan dengan SI-MATSAMA setelah RADISTES mandiri
+
+1. **Buat batas modul siswa sejak awal.** Gunakan operasi baca seperti `AmbilSiswa(id)` dan `DaftarSiswaRombel(rombelID, periode)`. Untuk tahap awal, modul membaca database RADISTES. Modul nilai tetap memakai ID siswa lokal.
+2. **Audit SI-MATSAMA ketika siap.** Periksa ID, cakupan unik NIS dan NISN, data orang tua, riwayat rombel, dan akses API. Mulai dengan membaca satu rombel.
+3. **Cocokkan data uji.** Pakai NISN yang tersedia dan unik, lalu NIS dalam cakupan madrasah. Jika hasil meragukan, cocokkan secara manual sebelum mengubah sumber baca.
+4. **Buat pemetaan ID.** Simpan pasangan ID lokal RADISTES, sistem asal, dan ID siswa di SI-MATSAMA dengan batas keunikan. Contohnya, siswa RADISTES `125` dapat menunjuk ke siswa SI-MATSAMA `842`. Nilai lama tetap memakai ID RADISTES. Pertukaran data dimulai melalui API.
+5. **Alihkan sumber biodata bertahap.** Setelah hasil cocok, jadikan SI-MATSAMA sumber utama identitas dan biodata. Tentukan pemilik data rombel dan aturan koreksi setelah kedua aplikasi siap. Arsip raport yang telah diterbitkan tetap bergantung pada data periode asal.
+6. **Uji cadangan dan pemulihan.** Simpan tabel pemetaan, uji jika SI-MATSAMA lambat atau tidak dapat diakses, lalu siapkan pengembalian sumber baca ke data RADISTES bila pencocokan gagal. Jadwalkan integrasi login dan menu setelah pertukaran data lulus.
